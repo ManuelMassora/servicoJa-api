@@ -12,9 +12,23 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 		ctx.JSON(http.StatusNotFound, gin.H{"Mensagem": "Rota nao encontrada scu scu"})
 	})
 
+	iniciar := server.Group("iniciar")
+	{
+		iniciar.POST("/admin", container.UsuarioH.CriarAdmin)
+		iniciar.POST("/cliente", container.UsuarioH.CriarCliente)
+		iniciar.POST("/prestador", container.UsuarioH.CriarPrestador)
+	}
+
+	usuario := server.Group("usuario")
+	{
+		usuario.GET("", container.UsuarioH.ListarTodosUsuarios)
+		usuario.GET("/prestador", container.UsuarioH.ListarPrestadores)
+	}
+
 	categoria := server.Group("categoria")
 	{
 		categoria.POST("", container.CategoriaH.Criar)
+		categoria.PATCH(":id", container.CategoriaH.Editar)
 		categoria.GET("", container.CategoriaH.Listar)
 		categoria.GET(":id", container.CategoriaH.BuscarPorID)
 	}

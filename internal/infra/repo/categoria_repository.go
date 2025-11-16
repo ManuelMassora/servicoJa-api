@@ -20,13 +20,17 @@ func (r *CategoriaRepository) Criar(ctx context.Context, categoria *model.Catego
 	return r.db.WithContext(ctx).Create(categoria).Error
 }
 
+func (r *CategoriaRepository) Editar(ctx context.Context, id int64, campos map[string]interface{}) error {
+	return r.db.WithContext(ctx).Model(&model.Categoria{}).Where("id = ?", id).Updates(campos).Error
+}
+
 func (r *CategoriaRepository) Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Categoria, error) {
 	var categorias []model.Categoria
 	query := r.db.WithContext(ctx)
 
-	// Apply filters
+	// Apply filters with LIKE for contains
 	for field, value := range filters {
-		query = query.Where(field+" = ?", value)
+		query = query.Where(field+" LIKE ?", "%"+value.(string)+"%")
 	}
 
 	// Apply ordering

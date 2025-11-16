@@ -36,6 +36,10 @@ func (uc *CategoriaUseCase) Criar(ctx context.Context, request CategoriaRequest)
 	return nil
 }
 
+func (uc *CategoriaUseCase) Editar(ctx context.Context, id int64, campos map[string]interface{}) error {
+	return uc.CategoriaRepo.Editar(ctx, id, campos)
+}
+
 func (uc *CategoriaUseCase) Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]CategoriaResponse, error) {
 	categorias, err := uc.CategoriaRepo.Listar(ctx, filters, orderBy, orderDir, limit, offset)
 	if err != nil {

@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"log"
+	// "log"
 	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
@@ -25,19 +25,19 @@ func InitDB(dsn string) (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(5)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := createEnums(db); err != nil {
-		return nil, fmt.Errorf("erro criando ENUMs: %w", err)
-	}
+	// if err := createEnums(db); err != nil {
+	// 	return nil, fmt.Errorf("erro criando ENUMs: %w", err)
+	// }
 
-	if err := autoMigrate(db); err != nil {
-		return nil, fmt.Errorf("erro no AutoMigrate: %w", err)
-	}
+	// if err := autoMigrate(db); err != nil {
+	// 	return nil, fmt.Errorf("erro no AutoMigrate: %w", err)
+	// }
 
-	if err := insertInitialRoles(db); err != nil {
-		return nil, fmt.Errorf("erro ao adicionar Roles iniciais: %w", err)
-	}
+	// if err := insertInitialRoles(db); err != nil {
+	// 	return nil, fmt.Errorf("erro ao adicionar Roles iniciais: %w", err)
+	// }
 
-	log.Println("Conexão com o banco de dados e migrações realizadas com sucesso!")
+	// log.Println("Conexão com o banco de dados e migrações realizadas com sucesso!")
 	return db, nil
 }
 

@@ -30,6 +30,18 @@ func (r *UsuarioRepository) BuscarPorID(ctx context.Context, id int64) (*model.U
 	return &usuario, nil
 }
 
+func (r *UsuarioRepository) BuscarPorTelefone(ctx context.Context, telefone string) (*model.Usuario, error) {
+	var usuario model.Usuario
+	err := r.db.WithContext(ctx).
+		Preload("RolePermissao").
+		Where("telefone=?", telefone).
+		First(&usuario).Error
+	if err != nil {
+		return nil, err
+	}
+	return &usuario, nil
+}
+
 func (r *UsuarioRepository) Atualizar(ctx context.Context, usuario *model.Usuario) error {
 	return r.db.WithContext(ctx).Save(usuario).Error
 }
@@ -42,12 +54,12 @@ func (r *UsuarioRepository) ListarTodos(ctx context.Context, filters map[string]
 	var usuarios []model.Usuario
 	query := r.db.WithContext(ctx).Preload("RolePermissao")
 
-	// Apply filters
+	
 	for field, value := range filters {
-		query = query.Where(field+" = ?", value)
+		query = query.Where(field+" LIKE ?", "%"+value.(string)+"%")
 	}
 
-	// Apply ordering
+	
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -55,7 +67,7 @@ func (r *UsuarioRepository) ListarTodos(ctx context.Context, filters map[string]
 		query = query.Order(orderBy + " " + orderDir)
 	}
 
-	// Apply pagination
+	
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -97,12 +109,12 @@ func (r *ClienteRepository) Listar(ctx context.Context, filters map[string]inter
 	var clientes []model.Cliente
 	query := r.db.WithContext(ctx).Preload("Usuario")
 
-	// Apply filters
+	
 	for field, value := range filters {
 		query = query.Where(field+" = ?", value)
 	}
 
-	// Apply ordering
+	
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -110,7 +122,7 @@ func (r *ClienteRepository) Listar(ctx context.Context, filters map[string]inter
 		query = query.Order(orderBy + " " + orderDir)
 	}
 
-	// Apply pagination
+	
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -144,18 +156,6 @@ func (r *PrestadorRepository) AtualizarStatus(ctx context.Context, id int64, dis
 		Update("status_disponivel", disponivel).Error
 }
 
-func (r *PrestadorRepository) BuscarPorLocalizacao(ctx context.Context, local string) ([]model.Prestador, error) {
-	var prestadores []model.Prestador
-	err := r.db.WithContext(ctx).
-		Preload("Usuario").
-		Where("localizacao LIKE ? AND status_disponivel = ?", "%"+local+"%", true).
-		Find(&prestadores).Error
-	if err != nil {
-		return nil, err
-	}
-	return prestadores, nil
-}
-
 func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id int64) (*model.Prestador, error) {
 	var prestador model.Prestador
 	err := r.db.WithContext(ctx).
@@ -167,16 +167,28 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id int64) (*model
 	return &prestador, nil
 }
 
-func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
+func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
 	var prestadores []model.Prestador
 	query := r.db.WithContext(ctx).Preload("Usuario")
 
-	// Apply filters
+	// 1. Aplica filtros de string (usando LIKE)
 	for field, value := range filters {
-		query = query.Where(field+" = ?", value)
+		// Assume que todos os filtros no mapa 'filters' são strings para a busca LIKE
+		// Você pode precisar de uma verificação de tipo mais robusta aqui,
+		// mas seguindo sua implementação original, faremos o Type Assertion
+		if strVal, ok := value.(string); ok {
+			query = query.Where(field+" LIKE ?", "%"+strVal+"%")
+		}
 	}
 
-	// Apply ordering
+	// 2. Aplica filtro StatusDisponivel (booleano, busca exata)
+	// O parâmetro foi alterado para 'interface{}' para permitir nil ou um bool.
+	if statusDisponivel != nil {
+		if boolVal, ok := statusDisponivel.(bool); ok {
+			query = query.Where("status_disponivel = ?", boolVal)
+		}
+	}
+	
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -184,7 +196,6 @@ func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]int
 		query = query.Order(orderBy + " " + orderDir)
 	}
 
-	// Apply pagination
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
