@@ -14,7 +14,7 @@ type Servico struct {
 	IDPrestador *int64   `gorm:"column:id_prestador;type:bigint;default:null" json:"prestador_id,omitempty"`
 	Prestador   *Usuario `gorm:"foreignKey:IDPrestador;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"prestador,omitempty"`
 	IDCategoria *int64   `json:"categoria_id,omitempty"`
-	Categoria   *Categoria `gorm:"foreignKey:IDCategoria;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"categoria,omitempty"`
+	Categoria   *Categoria `gorm:"foreignKey:IDCategoria;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"categoria,omitempty"` //Mudar pra catalogoID
 }
 
 type ServicoRepo interface {

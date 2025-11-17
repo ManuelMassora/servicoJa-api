@@ -167,6 +167,18 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id int64) (*model
 	return &prestador, nil
 }
 
+func (r *PrestadorRepository) BuscarPorUsuarioID(ctx context.Context, id int64) (*model.Prestador, error) {
+	var prestador model.Prestador
+	err := r.db.WithContext(ctx).
+		Preload("Usuario").
+		Where("usuario_id", id).
+		First(&prestador).Error
+	if err != nil {
+		return nil, err
+	}
+	return &prestador, nil
+}
+
 func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
 	var prestadores []model.Prestador
 	query := r.db.WithContext(ctx).Preload("Usuario")

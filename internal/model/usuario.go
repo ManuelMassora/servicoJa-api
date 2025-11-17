@@ -54,6 +54,7 @@ type PrestadorRepo interface {
 	Criar(ctx context.Context, prestador *Prestador) error
 	AtualizarStatus(ctx context.Context, id int64, disponivel bool) error
 	BuscarPorID(ctx context.Context, id int64) (*Prestador, error)
+	BuscarPorUsuarioID(ctx context.Context, id int64) (*Prestador, error)
 	Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)
 }
 
@@ -151,7 +152,7 @@ func NewPrestador(localizacao string, raio_atuacao float64, nome string, telefon
 			Nome: nome,
 			Telefone: telefone,
 			Senha: senhaHash,
-			RolePermissaoID: 1,
+			RolePermissaoID: 2,
 		},
 		Localizacao: localizacao,
 		RaioAtuacao: raio_atuacao,

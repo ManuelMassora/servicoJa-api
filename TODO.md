@@ -1,0 +1,1 @@
+1. Ajustar tipos de dados e relacionamentos no banco de dados.
