@@ -19,7 +19,7 @@ func (r *AvaliacaoRepository) Criar(ctx context.Context, avaliacao *model.Avalia
 	return r.db.WithContext(ctx).Create(avaliacao).Error
 }
 
-func (r *AvaliacaoRepository) ListarPorServico(ctx context.Context, idServico int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Avaliacao, error) {
+func (r *AvaliacaoRepository) ListarPorServico(ctx context.Context, idServico uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Avaliacao, error) {
 	var avaliacoes []model.Avaliacao
 	query := r.db.WithContext(ctx).
 		Preload("Usuario").
@@ -55,7 +55,7 @@ func (r *AvaliacaoRepository) ListarPorServico(ctx context.Context, idServico in
 	return avaliacoes, nil
 }
 
-func (r *AvaliacaoRepository) MediaPorPrestador(ctx context.Context, idPrestador int64) (float64, error) {
+func (r *AvaliacaoRepository) MediaPorPrestador(ctx context.Context, idPrestador uint) (float64, error) {
 	var media float64
 	err := r.db.WithContext(ctx).
 		Table("avaliacaos"). // GORM pluralizes the table name

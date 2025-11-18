@@ -19,7 +19,7 @@ func (r *UsuarioRepository) Criar(ctx context.Context, usuario *model.Usuario) e
 	return r.db.WithContext(ctx).Create(usuario).Error
 }
 
-func (r *UsuarioRepository) BuscarPorID(ctx context.Context, id int64) (*model.Usuario, error) {
+func (r *UsuarioRepository) BuscarPorID(ctx context.Context, id uint) (*model.Usuario, error) {
 	var usuario model.Usuario
 	err := r.db.WithContext(ctx).
 		Preload("RolePermissao").
@@ -46,7 +46,7 @@ func (r *UsuarioRepository) Atualizar(ctx context.Context, usuario *model.Usuari
 	return r.db.WithContext(ctx).Save(usuario).Error
 }
 
-func (r *UsuarioRepository) Remover(ctx context.Context, id int64) error {
+func (r *UsuarioRepository) Remover(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&model.Usuario{}, id).Error
 }
 
@@ -94,11 +94,23 @@ func (r *ClienteRepository) Criar(ctx context.Context, cliente *model.Cliente) e
 	return r.db.WithContext(ctx).Create(cliente).Error
 }
 
-func (r *ClienteRepository) BuscarPorID(ctx context.Context, id int64) (*model.Cliente, error) {
+func (r *ClienteRepository) BuscarPorID(ctx context.Context, id uint) (*model.Cliente, error) {
 	var cliente model.Cliente
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
 		First(&cliente, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &cliente, nil
+}
+
+func (r *ClienteRepository) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Cliente, error) {
+	var cliente model.Cliente
+	err := r.db.WithContext(ctx).
+		Preload("Usuario").
+		Where("usuario_id", id).
+		First(&cliente).Error
 	if err != nil {
 		return nil, err
 	}
@@ -149,14 +161,14 @@ func (r *PrestadorRepository) Criar(ctx context.Context, prestador *model.Presta
 	return r.db.WithContext(ctx).Create(prestador).Error
 }
 
-func (r *PrestadorRepository) AtualizarStatus(ctx context.Context, id int64, disponivel bool) error {
+func (r *PrestadorRepository) AtualizarStatus(ctx context.Context, id uint, disponivel bool) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Prestador{}).
 		Where("id = ?", id).
 		Update("status_disponivel", disponivel).Error
 }
 
-func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id int64) (*model.Prestador, error) {
+func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id uint) (*model.Prestador, error) {
 	var prestador model.Prestador
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
@@ -167,7 +179,7 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id int64) (*model
 	return &prestador, nil
 }
 
-func (r *PrestadorRepository) BuscarPorUsuarioID(ctx context.Context, id int64) (*model.Prestador, error) {
+func (r *PrestadorRepository) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Prestador, error) {
 	var prestador model.Prestador
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").

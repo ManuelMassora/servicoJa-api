@@ -30,7 +30,7 @@ func (h *CategoriaHandler) Criar(c *gin.Context) {
 
 func (h *CategoriaHandler) Editar(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "invalid id"})
 		return
@@ -48,7 +48,7 @@ func (h *CategoriaHandler) Editar(c *gin.Context) {
 
 	delete(campos, "id")
 
-	if err := h.uc.Editar(c.Request.Context(), id, campos); err != nil {
+	if err := h.uc.Editar(c.Request.Context(), uint(id), campos); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
@@ -70,7 +70,7 @@ func (h *CategoriaHandler) Listar(c *gin.Context) {
 
 		// Try to convert common types
 		if key == "id" {
-			if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			if id, err := strconv.ParseUint(v, 10, 64); err == nil {
 				filters[key] = id
 				continue
 			}
@@ -121,12 +121,12 @@ func (h *CategoriaHandler) Listar(c *gin.Context) {
 
 func (h *CategoriaHandler) BuscarPorID(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "invalid id"})
 		return
 	}
-	categoria, err := h.uc.BuscarPorID(c.Request.Context(), id)
+	categoria, err := h.uc.BuscarPorID(c.Request.Context(), uint(id))
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

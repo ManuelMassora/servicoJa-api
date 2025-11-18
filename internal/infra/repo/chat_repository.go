@@ -19,7 +19,7 @@ func (r *ChatRepository) CriarChat(ctx context.Context, chat *model.Chat) error 
 	return r.db.WithContext(ctx).Create(chat).Error
 }
 
-func (r *ChatRepository) ListarChatsPorUsuario(ctx context.Context, idUsuario int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Chat, error) {
+func (r *ChatRepository) ListarChatsPorUsuario(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Chat, error) {
 	var chats []model.Chat
 	query := r.db.WithContext(ctx).
 		Preload("Servico").
@@ -67,7 +67,7 @@ func (r *MensagemRepository) EnviarMensagem(ctx context.Context, msg *model.Mens
 	return r.db.WithContext(ctx).Create(msg).Error
 }
 
-func (r *MensagemRepository) ListarMensagens(ctx context.Context, idChat int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Mensagem, error) {
+func (r *MensagemRepository) ListarMensagens(ctx context.Context, idChat uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Mensagem, error) {
 	var mensagens []model.Mensagem
 	query := r.db.WithContext(ctx).
 		Preload("Chat").

@@ -24,7 +24,7 @@ type RequestCreateCatalogo struct {
 	Nome        string   `json:"nome" binding:"required"`
 	Descricao   string   `json:"descricao" binding:"required"`
 	PrecoBase   float64  `json:"precobase" binding:"required"`
-	Categoria   string   `json:"categoria" binding:"required"`
+	IdCategoria  uint   `json:"categoriaid" binding:"required"`
 }
 type ResponseCatalogo struct {
 	Nome        string  `json:"nome"`
@@ -35,7 +35,7 @@ type ResponseCatalogo struct {
 	Prestador   string 	`json:"prestador"`
 }
 
-func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador int64) error {
+func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
 	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idPrestador)
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 		Nome: request.Nome,
 		Descricao: request.Descricao,
 		PrecoBase: request.PrecoBase,
-		Categoria: request.Categoria,
+		IDCategoria: request.IdCategoria,
 		IDPrestador: prestador.ID,
 	}
 	log.Printf("Id do Usuario: %d", idPrestador)
@@ -52,7 +52,7 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 	return uc.r.Create(ctx,catalogo)
 }
 
-func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador int64, campos map[string]interface{}) error {
+func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador uint, campos map[string]interface{}) error {
 	catalogo, err := uc.r.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador int64, camp
 	return uc.r.Update(ctx, id, campos)
 }
 
-func(uc *CatalogoUseCase) Apagar(ctx context.Context, id, idPrestador int64) error {
+func(uc *CatalogoUseCase) Apagar(ctx context.Context, id, idPrestador uint) error {
 	catalogo, err := uc.r.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -93,15 +93,15 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
 			PrecoBase: catalogo.PrecoBase,
-			Categoria: catalogo.Categoria,
+			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Nome,
+			Prestador: catalogo.Prestador.Usuario.Nome,
 		})
 	}
 	return catalogoResponse, nil
 }
 
-func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
+func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
 	catalogos, err := uc.r.FindByPrestadorID(ctx, prestadorID, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -112,9 +112,9 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID int
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
 			PrecoBase: catalogo.PrecoBase,
-			Categoria: catalogo.Categoria,
+			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Nome,
+			Prestador: catalogo.Prestador.Usuario.Nome,
 		})
 	}
 	return catalogoResponse, nil

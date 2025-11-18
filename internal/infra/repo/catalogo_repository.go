@@ -20,17 +20,17 @@ func (r *CatalogoRepository) Create(ctx context.Context,catalogo *model.Catalogo
 	return r.db.Create(catalogo).Error
 }
 
-func (r *CatalogoRepository) Update(ctx context.Context, id int64, campos map[string]interface{}) error {
+func (r *CatalogoRepository) Update(ctx context.Context, id uint, campos map[string]interface{}) error {
 	return r.db.Model(&model.Catalogo{}).Where("id=?", id).Updates(campos).Error
 }
 
-func (r *CatalogoRepository) Delete(ctx context.Context, id int64) error {
+func (r *CatalogoRepository) Delete(ctx context.Context, id uint) error {
     return r.db.Model(&model.Catalogo{}).
         Where("id = ?", id).
         Update("deleted_at", time.Now()).Error 
 }
 
-func (r *CatalogoRepository) FindByID(ctx context.Context,id int64) (*model.Catalogo, error) {
+func (r *CatalogoRepository) FindByID(ctx context.Context,id uint) (*model.Catalogo, error) {
 	var catalogo model.Catalogo
 	err := r.db.Preload("Prestador").First(&catalogo, id).Error
 	if err != nil {
@@ -41,9 +41,11 @@ func (r *CatalogoRepository) FindByID(ctx context.Context,id int64) (*model.Cata
 
 func (r *CatalogoRepository) FindAll(ctx context.Context,filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*model.Catalogo, error) {
 	var catalogos []*model.Catalogo
-	query := r.db.Preload("Prestador").Model(&model.Catalogo{})
+	query := r.db.Preload("Prestador").
+	Preload("Prestador.Usuario").
+	Preload("Categoria").
+	Model(&model.Catalogo{})
 
-	
 	for key, value := range filters {
 		query = query.Where(key+" LIKE ?", "%"+value.(string)+"%")
 	}
@@ -68,7 +70,7 @@ func (r *CatalogoRepository) FindAll(ctx context.Context,filters map[string]inte
 	return catalogos, nil
 }
 
-func (r *CatalogoRepository) FindByPrestadorID(ctx context.Context,prestadorID int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*model.Catalogo, error) {
+func (r *CatalogoRepository) FindByPrestadorID(ctx context.Context,prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*model.Catalogo, error) {
 	var catalogos []*model.Catalogo
 	query := r.db.Preload("Prestador").Model(&model.Catalogo{}).Where("id_prestador = ?", prestadorID)
 

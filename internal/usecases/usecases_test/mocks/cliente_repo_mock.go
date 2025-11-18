@@ -16,7 +16,15 @@ func (m *MockClienteRepo) Criar(ctx context.Context, cliente *model.Cliente) err
 	return args.Error(0)
 }
 
-func (m *MockClienteRepo) BuscarPorID(ctx context.Context, id int64) (*model.Cliente, error) {
+func (m *MockClienteRepo) BuscarPorID(ctx context.Context, id uint) (*model.Cliente, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Cliente), args.Error(1)
+}
+
+func (m *MockClienteRepo) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Cliente, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

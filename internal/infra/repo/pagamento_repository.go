@@ -19,7 +19,7 @@ func (r *PagamentoRepository) Criar(ctx context.Context, pagamento *model.Pagame
 	return r.db.WithContext(ctx).Create(pagamento).Error
 }
 
-func (r *PagamentoRepository) BuscarPorServico(ctx context.Context, idServico int64) (*model.Pagamento, error) {
+func (r *PagamentoRepository) BuscarPorServico(ctx context.Context, idServico uint) (*model.Pagamento, error) {
 	var pagamento model.Pagamento
 	err := r.db.WithContext(ctx).
 		Preload("Servico").
@@ -33,14 +33,14 @@ func (r *PagamentoRepository) BuscarPorServico(ctx context.Context, idServico in
 	return &pagamento, nil
 }
 
-func (r *PagamentoRepository) AtualizarStatus(ctx context.Context, id int64, status model.Status) error {
+func (r *PagamentoRepository) AtualizarStatus(ctx context.Context, id uint, status model.Status) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Pagamento{}).
 		Where("id = ?", id).
 		Update("status", status).Error
 }
 
-func (r *PagamentoRepository) ListarPorUsuario(ctx context.Context, idUsuario int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Pagamento, error) {
+func (r *PagamentoRepository) ListarPorUsuario(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Pagamento, error) {
 	var pagamentos []model.Pagamento
 	query := r.db.WithContext(ctx).
 		Preload("Servico").

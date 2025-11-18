@@ -16,6 +16,7 @@ type Container struct {
 	ClienteRepo *repo.ClienteRepository
 	PrestadorRepo *repo.PrestadorRepository
 	CatalogoRepo *repo.CatalogoRepository
+	AgendamentoRepo *repo.AgendamentoRepo
 
 	//Services
 	AuthService *services.AuthUSer
@@ -25,12 +26,14 @@ type Container struct {
 	CategoriaUC *usecases.CategoriaUseCase
 	UsuarioUC *usecases.UsuarioUseCase
 	CatalogoUC *usecases.CatalogoUseCase
+	AgendamentoUC *usecases.AgendamentoUC
 
 	//Handler
 	CategoriaH	*handler.CategoriaHandler
 	UsuarioH *handler.UsuarioHandler
 	AuthHandler *handler.AuthHandler
 	CatalogoH *handler.CatalogoHandler
+	AgendamentoH *handler.AgendamentoHandler
 }
 
 func NewContainer(db *gorm.DB) *Container {
@@ -42,6 +45,7 @@ func NewContainer(db *gorm.DB) *Container {
 	c.ClienteRepo = repo.NewClienteRepository(db).(*repo.ClienteRepository)
 	c.PrestadorRepo = repo.NewPrestadorRepository(db).(*repo.PrestadorRepository)
 	c.CatalogoRepo = repo.NewCatalogoRepository(db).(*repo.CatalogoRepository)
+	c.AgendamentoRepo = repo.NewAgendamentoRepo(db).(*repo.AgendamentoRepo)
 
 	//Init Services
 	c.JwtService = middleware.NewJWTService()
@@ -50,11 +54,13 @@ func NewContainer(db *gorm.DB) *Container {
 	c.CategoriaUC = usecases.NewCategoriaUseCase(c.CategoriaRepo)
 	c.UsuarioUC = usecases.NewUsuarioUseCase(c.UsuarioRepo, c.ClienteRepo, c.PrestadorRepo)
 	c.CatalogoUC = usecases.NewCatalogoUC(c.CatalogoRepo, c.PrestadorRepo)
+	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.ClienteRepo, c.PrestadorRepo)
 
 	//Init Handler
 	c.CategoriaH = handler.NewCategoriaHandler(*c.CategoriaUC)
 	c.UsuarioH = handler.NewUsuarioHandler(*c.UsuarioUC)
 	c.AuthHandler = handler.NewAuthHandler(*c.AuthService)
 	c.CatalogoH = handler.NewCatalogoHandler(*c.CatalogoUC)
+	c.AgendamentoH = handler.NewAgendamentoHandler(*c.AgendamentoUC)
 	return c
 }

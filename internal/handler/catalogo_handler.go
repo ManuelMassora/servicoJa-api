@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -17,24 +16,6 @@ func NewCatalogoHandler(uc usecases.CatalogoUseCase) *CatalogoHandler {
 	return &CatalogoHandler{uc: uc}
 }
 
-func getPrestadorID(c *gin.Context) (int64, error) {
-	prestadorIDVal, exists := c.Get("userID") 
-	if !exists {
-		return 0, errors.New("User ID não encontrado no contexto. Middleware de autenticação ausente?")
-	}
-
-	id, ok := prestadorIDVal.(uint)
-	if !ok {
-		
-		if id64, ok := prestadorIDVal.(int64); ok {
-			return id64, nil
-		}
-		
-		return 0, errors.New("userID no contexto com formato inválido")
-	}
-	return int64(id), nil
-}
-
 func (h *CatalogoHandler) Criar(c *gin.Context) {
 	var request usecases.RequestCreateCatalogo
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -42,7 +23,7 @@ func (h *CatalogoHandler) Criar(c *gin.Context) {
 		return
 	}
 
-	prestadorID, err := getPrestadorID(c)
+	prestadorID, err := getUsuarioID(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -58,13 +39,13 @@ func (h *CatalogoHandler) Criar(c *gin.Context) {
 
 func (h *CatalogoHandler) Editar(c *gin.Context) {
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de catálogo inválido"})
 		return
 	}
 
-	prestadorID, err := getPrestadorID(c)
+	prestadorID, err := getUsuarioID(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -83,7 +64,7 @@ func (h *CatalogoHandler) Editar(c *gin.Context) {
 
 	delete(campos, "id")
 	delete(campos, "idprestador") 
-	if err := h.uc.Editar(c.Request.Context(), id, prestadorID, campos); err != nil {
+	if err := h.uc.Editar(c.Request.Context(), uint(id), prestadorID, campos); err != nil {
 		
 		if err.Error() == "nao tem permissao para apagar esse catalogo" { 
 			c.JSON(http.StatusForbidden, gin.H{"error": "Você não tem permissão para editar este catálogo."})
@@ -99,19 +80,19 @@ func (h *CatalogoHandler) Editar(c *gin.Context) {
 func (h *CatalogoHandler) Apagar(c *gin.Context) {
 	
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de catálogo inválido"})
 		return
 	}
 
-	prestadorID, err := getPrestadorID(c)
+	prestadorID, err := getUsuarioID(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.uc.Apagar(c.Request.Context(), id, prestadorID); err != nil {
+	if err := h.uc.Apagar(c.Request.Context(), uint(id), prestadorID); err != nil {
 		
 		if err.Error() == "nao tem permissao para apagar esse catalogo" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Você não tem permissão para apagar este catálogo."})
@@ -137,7 +118,7 @@ func (h *CatalogoHandler) Listar(c *gin.Context) {
 		v := vals[0]
 
 		if key == "id" {
-			if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			if id, err := strconv.ParseUint(v, 10, 64); err == nil {
 				filters[key] = id
 				continue
 			}
@@ -187,7 +168,7 @@ func (h *CatalogoHandler) Listar(c *gin.Context) {
 func (h *CatalogoHandler) ListarPorPrestador(c *gin.Context) {
 	
 	prestadorIDStr := c.Param("prestadorID")
-	prestadorID, err := strconv.ParseInt(prestadorIDStr, 10, 64)
+	prestadorID, err := strconv.ParseUint(prestadorIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de prestador inválido"})
 		return
@@ -204,7 +185,7 @@ func (h *CatalogoHandler) ListarPorPrestador(c *gin.Context) {
 		v := vals[0]
 
 		if key == "id" {
-			if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			if id, err := strconv.ParseUint(v, 10, 64); err == nil {
 				filters[key] = id
 				continue
 			}
@@ -234,7 +215,7 @@ func (h *CatalogoHandler) ListarPorPrestador(c *gin.Context) {
 
 	offset := (page - 1) * pageSize
 
-	catalogos, err := h.uc.ListarPorPrestador(c.Request.Context(), prestadorID, filters, orderBy, orderDir, pageSize, offset)
+	catalogos, err := h.uc.ListarPorPrestador(c.Request.Context(), uint(prestadorID), filters, orderBy, orderDir, pageSize, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

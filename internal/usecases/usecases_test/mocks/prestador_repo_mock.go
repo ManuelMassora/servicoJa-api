@@ -16,12 +16,12 @@ func (m *MockPrestadorRepo) Criar(ctx context.Context, prestador *model.Prestado
 	return args.Error(0)
 }
 
-func (m *MockPrestadorRepo) AtualizarStatus(ctx context.Context, id int64, disponivel bool) error {
+func (m *MockPrestadorRepo) AtualizarStatus(ctx context.Context, id uint, disponivel bool) error {
 	args := m.Called(ctx, id, disponivel)
 	return args.Error(0)
 }
 
-func (m *MockPrestadorRepo) BuscarPorID(ctx context.Context, id int64) (*model.Prestador, error) {
+func (m *MockPrestadorRepo) BuscarPorID(ctx context.Context, id uint) (*model.Prestador, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -29,7 +29,7 @@ func (m *MockPrestadorRepo) BuscarPorID(ctx context.Context, id int64) (*model.P
 	return args.Get(0).(*model.Prestador), args.Error(1)
 }
 
-func (m *MockPrestadorRepo) BuscarPorUsuarioID(ctx context.Context, id int64) (*model.Prestador, error) {
+func (m *MockPrestadorRepo) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Prestador, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

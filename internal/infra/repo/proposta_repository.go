@@ -20,7 +20,7 @@ func (r *PropostaRepository) Criar(ctx context.Context, proposta *model.Proposta
 	return r.db.WithContext(ctx).Create(proposta).Error
 }
 
-func (r *PropostaRepository) ListarPorVaga(ctx context.Context, idVaga int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Proposta, error) {
+func (r *PropostaRepository) ListarPorVaga(ctx context.Context, idVaga uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Proposta, error) {
 	var propostas []model.Proposta
 	query := r.db.WithContext(ctx).Preload("Vaga").Preload("Prestador").Where("id_vaga = ?", idVaga)
 
@@ -41,7 +41,7 @@ func (r *PropostaRepository) ListarPorVaga(ctx context.Context, idVaga int64, fi
 	return propostas, nil
 }
 
-func (r *PropostaRepository) ListarPorPrestador(ctx context.Context, idPrestador int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Proposta, error) {
+func (r *PropostaRepository) ListarPorPrestador(ctx context.Context, idPrestador uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Proposta, error) {
 	var propostas []model.Proposta
 	query := r.db.WithContext(ctx).Preload("Vaga").Preload("Prestador").Where("id_prestador = ?", idPrestador)
 
@@ -62,7 +62,7 @@ func (r *PropostaRepository) ListarPorPrestador(ctx context.Context, idPrestador
 	return propostas, nil
 }
 
-func (r *PropostaRepository) AtualizarStatus(ctx context.Context, idProposta int64, status model.Status, dataResposta time.Time) error {
+func (r *PropostaRepository) AtualizarStatus(ctx context.Context, idProposta uint, status model.Status, dataResposta time.Time) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Proposta{}).
 		Where("id = ?", idProposta).

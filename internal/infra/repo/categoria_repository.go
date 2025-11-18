@@ -20,7 +20,7 @@ func (r *CategoriaRepository) Criar(ctx context.Context, categoria *model.Catego
 	return r.db.WithContext(ctx).Create(categoria).Error
 }
 
-func (r *CategoriaRepository) Editar(ctx context.Context, id int64, campos map[string]interface{}) error {
+func (r *CategoriaRepository) Editar(ctx context.Context, id uint, campos map[string]interface{}) error {
 	return r.db.WithContext(ctx).Model(&model.Categoria{}).Where("id = ?", id).Updates(campos).Error
 }
 
@@ -56,7 +56,7 @@ func (r *CategoriaRepository) Listar(ctx context.Context, filters map[string]int
 	return categorias, nil
 }
 
-func (r *CategoriaRepository) BuscarPorID(ctx context.Context, id int64) (*model.Categoria, error) {
+func (r *CategoriaRepository) BuscarPorID(ctx context.Context, id uint) (*model.Categoria, error) {
 	var categoria model.Categoria
 	err := r.db.WithContext(ctx).First(&categoria, id).Error
 	if err != nil {

@@ -43,4 +43,10 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 		catalogo.GET("", container.CatalogoH.Listar)
 		catalogo.GET("/:prestadorID", container.CatalogoH.ListarPorPrestador)
 	}
+	agendamento := server.Group("agendamento", middleware.Auth())
+	{
+		agendamento.POST("", middleware.HasRole("CLIENTE"), container.AgendamentoH.Criar)
+		agendamento.GET("/:id", container.AgendamentoH.Buscar)
+		agendamento.GET("", container.AgendamentoH.Listar)
+	}
 }

@@ -19,7 +19,7 @@ func (r *ServicoRepository) Criar(ctx context.Context, servico *model.Servico) e
 	return r.db.WithContext(ctx).Create(servico).Error
 }
 
-func (r *ServicoRepository) BuscarPorID(ctx context.Context, id int64) (*model.Servico, error) {
+func (r *ServicoRepository) BuscarPorID(ctx context.Context, id uint) (*model.Servico, error) {
 	var servico model.Servico
 	err := r.db.WithContext(ctx).
 		Preload("Cliente").
@@ -32,14 +32,14 @@ func (r *ServicoRepository) BuscarPorID(ctx context.Context, id int64) (*model.S
 	return &servico, nil
 }
 
-func (r *ServicoRepository) AtualizarStatus(ctx context.Context, id int64, status string) error {
+func (r *ServicoRepository) AtualizarStatus(ctx context.Context, id uint, status string) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Servico{}).
 		Where("id = ?", id).
 		Update("status", status).Error
 }
 
-func (r *ServicoRepository) ListarPorCliente(ctx context.Context, idCliente int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Servico, error) {
+func (r *ServicoRepository) ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Servico, error) {
 	var servicos []model.Servico
 	query := r.db.WithContext(ctx).
 		Preload("Cliente").

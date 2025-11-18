@@ -16,7 +16,7 @@ func (m *MockUsuarioRepo) Criar(ctx context.Context, usuario *model.Usuario) err
 	return args.Error(0)
 }
 
-func (m *MockUsuarioRepo) BuscarPorID(ctx context.Context, id int64) (*model.Usuario, error) {
+func (m *MockUsuarioRepo) BuscarPorID(ctx context.Context, id uint) (*model.Usuario, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -37,7 +37,7 @@ func (m *MockUsuarioRepo) Atualizar(ctx context.Context, usuario *model.Usuario)
 	return args.Error(0)
 }
 
-func (m *MockUsuarioRepo) Remover(ctx context.Context, id int64) error {
+func (m *MockUsuarioRepo) Remover(ctx context.Context, id uint) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }

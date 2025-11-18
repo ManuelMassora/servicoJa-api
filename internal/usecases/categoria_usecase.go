@@ -20,7 +20,7 @@ type CategoriaRequest struct {
 }
 
 type CategoriaResponse struct {
-	ID			int64
+	ID			uint
 	Nome      string `json:"nome"`
 	Descricao string `json:"descricao"`
 }
@@ -36,7 +36,7 @@ func (uc *CategoriaUseCase) Criar(ctx context.Context, request CategoriaRequest)
 	return nil
 }
 
-func (uc *CategoriaUseCase) Editar(ctx context.Context, id int64, campos map[string]interface{}) error {
+func (uc *CategoriaUseCase) Editar(ctx context.Context, id uint, campos map[string]interface{}) error {
 	return uc.CategoriaRepo.Editar(ctx, id, campos)
 }
 
@@ -57,7 +57,7 @@ func (uc *CategoriaUseCase) Listar(ctx context.Context, filters map[string]inter
 	return resp, nil
 }
 
-func (uc *CategoriaUseCase) BuscarPorID(ctx context.Context, id int64) (*CategoriaResponse, error) {
+func (uc *CategoriaUseCase) BuscarPorID(ctx context.Context, id uint) (*CategoriaResponse, error) {
 	categoria, err := uc.CategoriaRepo.BuscarPorID(ctx, id)
 	if err != nil {
 		return nil, err

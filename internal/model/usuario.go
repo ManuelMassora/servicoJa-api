@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"regexp"
 
 	"github.com/alexedwards/argon2id"
 )
@@ -11,38 +12,39 @@ import (
 type Usuario struct {
 	BaseModel
 	Nome     string `json:"nome"`
-	Telefone string `json:"telefone"`
+	Telefone string `gorm:"unique" json:"telefone"`
 	Senha    string `json:"senha,omitempty"`
-	RolePermissaoID   int64
+	RolePermissaoID   uint
 	RolePermissao     RolePermissao  `gorm:"foreignKey:RolePermissaoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"rolepermissao,omitempty"`
 }
 
 type UsuarioRepo interface {
 	Criar(ctx context.Context, usuario *Usuario) error
-	BuscarPorID(ctx context.Context, id int64) (*Usuario, error)
+	BuscarPorID(ctx context.Context, id uint) (*Usuario, error)
 	BuscarPorTelefone(ctx context.Context, numero string) (*Usuario, error)
 	Atualizar(ctx context.Context, usuario *Usuario) error
-	Remover(ctx context.Context, id int64) error
+	Remover(ctx context.Context, id uint) error
 	ListarTodos(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Usuario, error)
 }
 
 // Cliente representa a ligação de um usuário com o perfil de cliente.
 type Cliente struct {
 	BaseModel
-	UsuarioID int64   `json:"usuario_id" gorm:"not null"`
+	UsuarioID uint   `json:"usuario_id" gorm:"not null"`
 	Usuario   Usuario `gorm:"foreignKey:UsuarioID;references:ID" json:"usuario,omitempty"`
 }
 
 type ClienteRepo interface {
 	Criar(ctx context.Context, cliente *Cliente) error
-	BuscarPorID(ctx context.Context, id int64) (*Cliente, error)
+	BuscarPorID(ctx context.Context, id uint) (*Cliente, error)
+	BuscarPorUsuarioID(ctx context.Context, id uint) (*Cliente, error)
 	Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Cliente, error)
 }
 
 // Prestador representa o perfil de prestador ligado a um usuário.
 type Prestador struct {
 	BaseModel
-	UsuarioID       	int64    	`json:"usuario_id" gorm:"not null"`
+	UsuarioID       	uint    	`json:"usuario_id" gorm:"not null"`
 	Usuario         	Usuario 	`gorm:"foreignKey:UsuarioID;references:ID" json:"usuario,omitempty"`
 	Localizacao     	string   	`json:"localizacao"`
 	StatusDisponivel 	bool    	`json:"status_disponivel"`
@@ -52,9 +54,9 @@ type Prestador struct {
 
 type PrestadorRepo interface {
 	Criar(ctx context.Context, prestador *Prestador) error
-	AtualizarStatus(ctx context.Context, id int64, disponivel bool) error
-	BuscarPorID(ctx context.Context, id int64) (*Prestador, error)
-	BuscarPorUsuarioID(ctx context.Context, id int64) (*Prestador, error)
+	AtualizarStatus(ctx context.Context, id uint, disponivel bool) error
+	BuscarPorID(ctx context.Context, id uint) (*Prestador, error)
+	BuscarPorUsuarioID(ctx context.Context, id uint) (*Prestador, error)
 	Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)
 }
 
@@ -66,14 +68,31 @@ var params = &argon2id.Params{
     KeyLength: 16,
 }
 
+var strictE164Regex = regexp.MustCompile(`^\+[0-9]+$`)
+
+func validateNumericPhone(telefone string) error {
+	if telefone == "" {
+		return errors.New("o telefone não pode ser vazio")
+	}
+
+	if !strictE164Regex.MatchString(telefone) {
+		return errors.New("o telefone deve conter apenas números (dígitos de 0 a 9)")
+	}
+
+	if len(telefone) < 8 || len(telefone) > 15 {
+	    return errors.New("o telefone tem um comprimento inválido")
+	}
+
+	return nil
+}
+
 func NewAdmin(nome, telefone, senha string) (*Usuario,error) {
 	if nome == "" {
         return nil, errors.New("nome não pode ser vazio")
     }
-
-	if telefone == "" {
-        return nil, errors.New("telefone não pode ser vazio")
-    }
+	if err := validateNumericPhone(telefone); err != nil {
+		return nil, err
+	}
 	if len([]byte(senha)) < 6 {
         return nil, errors.New("senha não pode ter menos de 6 letras")
     }
@@ -99,11 +118,9 @@ func NewCliente(nome, telefone, senha string) (*Cliente,error) {
 	if nome == "" {
         return nil, errors.New("nome não pode ser vazio")
     }
-
-	if telefone == "" {
-        return nil, errors.New("telefone não pode ser vazio")
-    }
-		
+	if err := validateNumericPhone(telefone); err != nil {
+		return nil, err
+	}
 	if len([]byte(senha)) < 6 {
         return nil, errors.New("senha não pode ter menos de 6 letras")
     }
@@ -131,10 +148,9 @@ func NewPrestador(localizacao string, raio_atuacao float64, nome string, telefon
 	if nome == "" {
         return nil, errors.New("nome não pode ser vazio")
     }
-
-	if telefone == "" {
-        return nil, errors.New("telefone não pode ser vazio")
-    }
+	if err := validateNumericPhone(telefone); err != nil {
+		return nil, err
+	}
 	if len([]byte(senha)) < 6 {
         return nil, errors.New("senha não pode ter menos de 6 letras")
     }

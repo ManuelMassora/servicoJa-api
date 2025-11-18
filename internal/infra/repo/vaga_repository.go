@@ -19,7 +19,7 @@ func (r *VagaRepository) Criar(ctx context.Context, vaga model.Vaga) error {
 	return r.db.WithContext(ctx).Create(&vaga).Error
 }
 
-func (r *VagaRepository) BuscarPorID(ctx context.Context, id int64) (*model.Vaga, error) {
+func (r *VagaRepository) BuscarPorID(ctx context.Context, id uint) (*model.Vaga, error) {
 	var vaga model.Vaga
 	err := r.db.WithContext(ctx).
 		Preload("Cliente").
@@ -56,7 +56,7 @@ func (r *VagaRepository) ListarDisponiveis(ctx context.Context, filters map[stri
 	return vagas, nil
 }
 
-func (r *VagaRepository) AceitarVaga(ctx context.Context, idVaga, idPrestador int64) error {
+func (r *VagaRepository) AceitarVaga(ctx context.Context, idVaga, idPrestador uint) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Atualizar o prestador da vaga
 		err := tx.Model(&model.Vaga{}).
@@ -73,7 +73,7 @@ func (r *VagaRepository) AceitarVaga(ctx context.Context, idVaga, idPrestador in
 	})
 }
 
-func (r *VagaRepository) AtualizarStatus(ctx context.Context, idVaga int64, status model.Status) error {
+func (r *VagaRepository) AtualizarStatus(ctx context.Context, idVaga uint, status model.Status) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Vaga{}).
 		Where("id = ?", idVaga).

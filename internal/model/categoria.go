@@ -10,7 +10,7 @@ type Categoria struct {
 
 type CategoriaRepo interface {
 	Criar(ctx context.Context, categoria *Categoria) error
-	Editar(ctx context.Context, id int64, campos map[string]interface{}) error
+	Editar(ctx context.Context, id uint, campos map[string]interface{}) error
 	Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Categoria, error)
-	BuscarPorID(ctx context.Context, id int64) (*Categoria, error)
+	BuscarPorID(ctx context.Context, id uint) (*Categoria, error)
 }

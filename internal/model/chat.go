@@ -14,9 +14,9 @@ type Chat struct {
 
 type Mensagem struct {
 	BaseModel
-	IDChat        int64    `json:"chat_id"`
+	IDChat        uint    `json:"chat_id"`
 	Chat          *Chat    `gorm:"foreignKey:IDChat;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"chat,omitempty"`
-	IDRemetente   int64    `json:"remetente_id"`
+	IDRemetente   uint    `json:"remetente_id"`
 	Remetente     *Usuario `gorm:"foreignKey:IDRemetente;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"remetente,omitempty"`
 	RemetenteTipo string   `json:"remetente_tipo"`
 	Conteudo      string   `json:"conteudo"`
@@ -24,10 +24,10 @@ type Mensagem struct {
 
 type ChatRepo interface {
 	CriarChat(ctx context.Context, chat *Chat) error
-		ListarChatsPorUsuario(ctx context.Context, idUsuario int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Chat, error)
+		ListarChatsPorUsuario(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Chat, error)
 }
 
 type MensagemRepo interface {
 	EnviarMensagem(ctx context.Context, msg *Mensagem) error
-		ListarMensagens(ctx context.Context, idChat int64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Mensagem, error)
+		ListarMensagens(ctx context.Context, idChat uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Mensagem, error)
 }
