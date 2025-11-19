@@ -1,1 +1,1 @@
-1. Ajustar tipos de dados e relacionamentos no banco de dados.
+1. Criar dois metodos de Listagem no agendamento, pra mais flexibilidade.

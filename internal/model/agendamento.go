@@ -19,6 +19,7 @@ type Agendamento struct {
 type AgendamentoRepo interface {
 	Criar(ctx context.Context, agendamento *Agendamento) error
 	BuscarPorID(ctx context.Context, id uint) (*Agendamento, error)
+	AtualizarStatus(ctx context.Context, id uint, status string) error
 	Listar(
 		ctx context.Context, 
 		filters map[string]interface{}, 
@@ -27,4 +28,6 @@ type AgendamentoRepo interface {
 		limit, 
 		offset int,
 	) ([]Agendamento, error)
+	ListarPorClienteID(ctx context.Context, clienteID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Agendamento, error)
+	ListarPorCatalogID(ctx context.Context, catalogoID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Agendamento, error)
 }

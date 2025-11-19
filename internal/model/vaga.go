@@ -9,10 +9,10 @@ type Vaga struct {
 	Localizacao string   `gorm:"column:localizacao;not null" json:"localizacao"`
 	Preco       float64  `gorm:"column:preco;not null;check:preco >= 0" json:"preco"`
 	Status      Status   `gorm:"column:status;not null" json:"status"`
-	IDCliente   uint    `gorm:"not null" json:"cliente_id"`
-	Cliente     *Usuario `gorm:"foreignKey:IDCliente" json:"cliente,omitempty"`
-	IDPrestador *uint   `json:"prestador_id,omitempty"` // nulo até alguém aceitar
-	Prestador   *Usuario `gorm:"foreignKey:IDPrestador" json:"prestador,omitempty"`
+	IDCliente   uint     `gorm:"not null" json:"cliente_id"`
+	Cliente     *Cliente `gorm:"foreignKey:IDCliente" json:"cliente,omitempty"`
+	IDPrestador *uint    `json:"prestador_id,omitempty"` // nulo até alguém aceitar
+	Prestador   *Prestador `gorm:"foreignKey:IDPrestador" json:"prestador,omitempty"`
 	Urgente     bool     `gorm:"column:urgente;not null;default:false" json:"urgente"`
 }
 

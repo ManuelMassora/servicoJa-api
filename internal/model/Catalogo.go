@@ -12,6 +12,7 @@ type Catalogo struct {
 	Disponivel  bool     `gorm:"column:disponivel;default:true" json:"disponivel"`
 	IDPrestador uint    `gorm:"column:id_prestador;type:bigint;not null" json:"prestador_id"`
 	Prestador   Prestador `gorm:"foreignKey:IDPrestador;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"prestador,omitempty"` // Corrigir pra usar *Prestador nao *Usuario
+	Localizacao string   `gorm:"column:localizacao;size:255;" json:"localizacao"`
 }
 
 type CatalogoRepo interface {

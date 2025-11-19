@@ -21,18 +21,21 @@ func NewCatalogoUC(
 }
 
 type RequestCreateCatalogo struct {
-	Nome        string   `json:"nome" binding:"required"`
-	Descricao   string   `json:"descricao" binding:"required"`
-	PrecoBase   float64  `json:"precobase" binding:"required"`
-	IdCategoria  uint   `json:"categoriaid" binding:"required"`
+	Nome        	string   `json:"nome" binding:"required"`
+	Descricao   	string   `json:"descricao" binding:"required"`
+	PrecoBase   	float64  `json:"precobase" binding:"required"`
+	IdCategoria  	uint   	`json:"categoriaid" binding:"required"`
+	Localizacao 	string   `json:"localizacao" binding:"required"`
 }
 type ResponseCatalogo struct {
+	ID		  	uint    `json:"id"`
 	Nome        string  `json:"nome"`
 	Descricao   string  `json:"descricao"`
 	PrecoBase   float64 `json:"preco_base"`
 	Categoria   string  `json:"categoria"`
 	Disponivel  bool    `json:"disponivel"`
 	Prestador   string 	`json:"prestador"`
+	Localizacao string   `json:"localizacao"`
 }
 
 func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
@@ -46,6 +49,7 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 		PrecoBase: request.PrecoBase,
 		IDCategoria: request.IdCategoria,
 		IDPrestador: prestador.ID,
+		Localizacao: request.Localizacao,
 	}
 	log.Printf("Id do Usuario: %d", idPrestador)
 	log.Printf("Id do prestador: %d", prestador.ID)
@@ -90,12 +94,14 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
 	for _, catalogo := range catalogos {
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
+			ID: catalogo.ID,
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
 			PrecoBase: catalogo.PrecoBase,
 			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
 			Prestador: catalogo.Prestador.Usuario.Nome,
+			Localizacao: catalogo.Localizacao,
 		})
 	}
 	return catalogoResponse, nil
@@ -109,12 +115,14 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uin
 	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
 	for _, catalogo := range catalogos {
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
+			ID: catalogo.ID,
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
 			PrecoBase: catalogo.PrecoBase,
 			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
 			Prestador: catalogo.Prestador.Usuario.Nome,
+			Localizacao: catalogo.Localizacao,
 		})
 	}
 	return catalogoResponse, nil
