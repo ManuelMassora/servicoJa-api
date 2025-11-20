@@ -17,9 +17,11 @@ type Vaga struct {
 }
 
 type VagaRepo interface {
-	Criar(ctx context.Context, vaga Vaga) error
+	Criar(ctx context.Context, vaga *Vaga) error
+	Salvar(ctx context.Context, vaga *Vaga) error
 	BuscarPorID(ctx context.Context, id uint) (*Vaga, error)
 	ListarDisponiveis(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Vaga, error)
+	ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Vaga, error)
 	AceitarVaga(ctx context.Context, idVaga, idPrestador uint) error
 	AtualizarStatus(ctx context.Context, idVaga uint, status Status) error
 }

@@ -15,8 +15,12 @@ func NewVagaRepository(db *gorm.DB) model.VagaRepo {
 	return &VagaRepository{db: db}
 }
 
-func (r *VagaRepository) Criar(ctx context.Context, vaga model.Vaga) error {
+func (r *VagaRepository) Criar(ctx context.Context, vaga *model.Vaga) error {
 	return r.db.WithContext(ctx).Create(&vaga).Error
+}
+
+func (r *VagaRepository) Salvar(ctx context.Context, vaga *model.Vaga) error {
+	return r.db.WithContext(ctx).Save(&vaga).Error
 }
 
 func (r *VagaRepository) BuscarPorID(ctx context.Context, id uint) (*model.Vaga, error) {
@@ -36,17 +40,59 @@ func (r *VagaRepository) ListarDisponiveis(ctx context.Context, filters map[stri
 	query := r.db.WithContext(ctx).
 		Preload("Cliente").
 		Where("id_prestador IS NULL")
-
 	for key, value := range filters {
-		query = query.Where(key+" = ?", value)
-	}
-
+        switch v := value.(type) {
+        case string:           
+            query = query.Where(key+" LIKE ?", "%"+v+"%")
+        case uint, int:
+            query = query.Where(key+" = ?", v)
+        default:         
+        }
+    }
 	if orderBy != "" {
+		if orderDir == "" {
+			orderDir = "asc"
+		}
 		query = query.Order(orderBy + " " + orderDir)
 	}
-
 	if limit > 0 {
-		query = query.Limit(limit).Offset(offset)
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	err := query.Find(&vagas).Error
+	if err != nil {
+		return nil, err
+	}
+	return vagas, nil
+}
+
+func (r *VagaRepository)	ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Vaga, error) {
+	var vagas []model.Vaga
+	query := r.db.WithContext(ctx).
+		Preload("Cliente").
+		Where("id_cliente = ?", idCliente)
+	for key, value := range filters {
+        switch v := value.(type) {
+        case string:           
+            query = query.Where(key+" LIKE ?", "%"+v+"%")
+        case uint, int:
+            query = query.Where(key+" = ?", v)
+        default:         
+        }
+    }
+	if orderBy != "" {
+		if orderDir == "" {
+			orderDir = "asc"
+		}
+		query = query.Order(orderBy + " " + orderDir)
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
 	}
 
 	err := query.Find(&vagas).Error

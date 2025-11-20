@@ -26,8 +26,9 @@ type Servico struct {
 
 type ServicoRepo interface {
 	Criar(ctx context.Context, servico *Servico) error
+	Atualizar(ctx context.Context, servico *Servico) error
 	BuscarPorID(ctx context.Context, id uint) (*Servico, error)
 	AtualizarStatus(ctx context.Context, id uint, status string) error
 	ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Servico, error)
-	ListarDisponiveis(ctx context.Context, localizacao string, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Servico, error)
+	ListarPorPrestador(ctx context.Context, IDPrestador uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Servico, error)
 }

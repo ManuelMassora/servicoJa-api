@@ -53,4 +53,26 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 		agendamento.GET("/cliente", middleware.HasRole("CLIENTE"), container.AgendamentoH.ListarPorClienteID)
 		agendamento.GET("/:catalogoID", middleware.HasRole("PRESTADOR"), container.AgendamentoH.ListarPorCatalogID)
 	}
+	servico := server.Group("servico", middleware.Auth())
+	{
+		servico.POST("/finalizar/:id", middleware.HasRole("PRESTADOR"), container.ServicoH.FinalizarServico)
+		servico.POST("/cancelar/:id", middleware.HasRole("CLIENTE", "PRESTADOR"), container.ServicoH.CancelarServico)
+		servico.GET("/cliente", middleware.HasRole("CLIENTE"), container.ServicoH.ListarPorCliente)
+		servico.GET("/prestador", middleware.HasRole("PRESTADOR"), container.ServicoH.ListarPorPrestador)
+	}
+	vagas := server.Group("vagas", middleware.Auth())
+	{
+		vagas.POST("", middleware.HasRole("CLIENTE"), container.VagaH.CriarVaga)
+		vagas.POST("cancelar/:id", middleware.HasRole("CLIENTE"), container.VagaH.CancelarVaga)
+		vagas.GET("", container.VagaH.ListarVagasDisponiveis)
+		vagas.GET("/cliente", container.VagaH.ListarPorCliente)
+	}
+	propostas := server.Group("propostas", middleware.Auth())
+	{
+		propostas.POST("", middleware.HasRole("PRESTADOR"), container.PropostaH.Criar)
+		propostas.POST("/aceitar/:id", middleware.HasRole("CLIENTE"), container.PropostaH.Responder)
+		propostas.POST("/cancelar/:id", middleware.HasRole("PRESTADOR"), container.PropostaH.Cancelar)
+		propostas.GET("/prestador", middleware.HasRole("PRESTADOR"), container.PropostaH.ListarPorPrestador)
+		propostas.GET("/cliente", middleware.HasRole("CLIENTE"), container.PropostaH.ListarPorVaga)
+	}
 }

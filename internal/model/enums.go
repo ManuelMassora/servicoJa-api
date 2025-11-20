@@ -4,10 +4,14 @@ package model
 type Status string
 
 const (
-	StatusPendente   Status = "PENDENTE"
-	StatusEmAndamento Status = "EM_ANDAMENTO"
-	StatusConcluido   Status = "CONCLUIDO"
-	StatusCancelado   Status = "CANCELADO"
+	StatusPendente   	Status = "PENDENTE"
+	StatusEmAndamento 	Status = "EM_ANDAMENTO"
+	StatusConcluido   	Status = "CONCLUIDO"
+	StatusCancelado   	Status = "CANCELADO"
+	StatusDisponivel  	Status = "DISPONIVEL"
+	StatusOcupada  	  	Status = "OCUPADA"
+	StatusAceito	  	Status = "ACEITO"
+	StatusRejeitado	  	Status = "REJEITADO"
 )
 
 // Tipo de movimento financeiro

@@ -1,1 +1,211 @@
 package usecases
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/ManuelMassora/servicoJa-api/internal/model"
+)
+
+type PropostaUseCase struct {
+	propostaRepo model.PropostaRepo
+	prestadorRepo model.PrestadorRepo
+	clienteRepo model.ClienteRepo
+	vagaRepo model.VagaRepo
+	servicoRepo model.ServicoRepo
+}
+
+func NewPropostaUseCase(
+	propostaRepo model.PropostaRepo,
+	prestadorRepo model.PrestadorRepo,
+	vagaRepo model.VagaRepo,
+	clienteRepo model.ClienteRepo,
+	servicoRepo model.ServicoRepo,
+	) *PropostaUseCase {
+	return &PropostaUseCase{
+		propostaRepo: propostaRepo, 
+		prestadorRepo: prestadorRepo, 
+		vagaRepo: vagaRepo, 
+		clienteRepo: clienteRepo,
+		servicoRepo: servicoRepo,
+	}
+}
+
+type PropostaRequest struct {
+	IDVaga        	uint      	`json:"id_vaga" binding:"required"`
+	ValorProposto 	float64    	`json:"valor_proposto" binding:"required"`
+	Mensagem      	string     	`json:"mensagem" binding:"required"`
+	PrazoEstimado 	string     	`json:"prazo_estimado" binding:"required"`
+	Status        	string     	`json:"status" binding:"required"`
+}
+
+type PropostaResponse struct {
+	ID	   			uint      	`json:"id"`
+	IDVaga        	uint    	`json:"id_vaga"`
+	Vaga			string		`json:"vaga"`
+	IDPrestador   	uint      	`json:"id_prestador"`
+	Prestador		string		`json:"prestador"`
+	ValorProposto 	float64    	`json:"valor_proposto"`
+	Mensagem      	string     	`json:"mensagem"`
+	PrazoEstimado 	string     	`json:"prazo_estimado"`
+	Status        	string     	`json:"status"`
+	DataResposta  	time.Time 	`json:"data_resposta"`
+}
+
+func (uc *PropostaUseCase) Criar(ctx context.Context, request PropostaRequest, idUsuario uint) error {
+	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
+	if err != nil {
+		return err
+	}
+	proposta := &model.Proposta{
+		IDVaga:         request.IDVaga,
+		IDPrestador:    prestador.ID,
+		ValorProposto:  request.ValorProposto,
+		Mensagem:       request.Mensagem,
+		PrazoEstimado:  request.PrazoEstimado,
+		Status:         model.StatusPendente,
+	}
+	return uc.propostaRepo.Salvar(ctx, proposta)
+}
+
+
+
+func (uc *PropostaUseCase) Aceitar(ctx context.Context, idProposta, idUsuario uint, aceitar bool) error {
+    cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idUsuario)
+    if err != nil {
+        return err
+    }
+    proposta, err := uc.propostaRepo.BuscarPorID(ctx, idProposta)
+    if err != nil {
+        return err
+    }
+    vaga, err := uc.vagaRepo.BuscarPorID(ctx, proposta.IDVaga)
+    if err != nil {
+        return err
+    }
+    if vaga.IDCliente != cliente.ID {
+        return errors.New("acesso negado: apenas o cliente dono da vaga pode responder a proposta")
+    }
+    if proposta.Status != model.StatusPendente {
+        return errors.New("acesso negado: apenas propostas pendentes podem ser respondidas")
+    }
+    proposta.DataResposta = time.Now()
+    if aceitar {
+        proposta.Status = model.StatusAceito
+        servico := &model.Servico{
+            IDVaga:          &proposta.IDVaga,
+            
+            Localizacao: vaga.Localizacao, 
+            Preco:           proposta.ValorProposto,
+            Status:          model.StatusEmAndamento,
+            IDCliente:       vaga.IDCliente,
+            IDPrestador:     proposta.IDPrestador,
+            DataHoraInicio:  time.Now(), 
+        }
+        if err := uc.servicoRepo.Criar(ctx, servico); err != nil {
+            return err
+        }
+    } else {
+        proposta.Status = model.StatusRejeitado
+    }
+    return uc.propostaRepo.Salvar(ctx, proposta)
+}
+
+func (uc *PropostaUseCase) Cancelar(ctx context.Context, idProposta, idUsuario uint) error {
+	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
+	if err != nil {
+		return err
+	}
+	proposta, err := uc.propostaRepo.BuscarPorID(ctx, idProposta)
+	if err != nil {
+		return err
+	}
+	if proposta.IDPrestador != prestador.ID {
+		return errors.New("acesso negado: apenas o prestador que fez a proposta pode cancelá-la")
+	}
+	proposta.Status = model.StatusCancelado
+	proposta.DeletedAt.Time = time.Now()
+	proposta.DeletedAt.Valid = true
+	return uc.propostaRepo.Salvar(ctx, proposta)
+}
+
+func mapPropostasToResponse(propostas []model.Proposta) []PropostaResponse {
+    if len(propostas) == 0 {
+        return []PropostaResponse{}
+    }
+    respostas := make([]PropostaResponse, 0, len(propostas))
+    for _, proposta := range propostas {
+        // Garantir que Vaga e Prestador estão carregados (preloaded) pelo Repositório.
+        // Se proposta.Vaga ou proposta.Prestador for nil, pode causar pânico (panic).
+        // Aqui assumimos que eles estão carregados (o que é usual em listagens).
+        
+        prestadorNome := ""
+        if proposta.Prestador != nil {
+            prestadorNome = proposta.Prestador.Usuario.Nome
+        }
+
+        vagaTitulo := ""
+        if proposta.Vaga.Titulo != "" {
+            vagaTitulo = proposta.Vaga.Titulo
+        }
+
+        respostas = append(respostas, PropostaResponse{
+            ID:              proposta.ID,
+            IDVaga:          proposta.IDVaga,
+            Vaga:            vagaTitulo,
+            IDPrestador:     proposta.IDPrestador,
+            Prestador:       prestadorNome,
+            ValorProposto:   proposta.ValorProposto,
+            Mensagem:        proposta.Mensagem,
+            PrazoEstimado:   proposta.PrazoEstimado,
+            Status:          string(proposta.Status),
+            DataResposta:    proposta.DataResposta,
+        })
+    }
+    return respostas
+}
+
+func (uc *PropostaUseCase) ListarPorVaga(ctx context.Context, idUsuario, idVaga uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]PropostaResponse, error) {
+    // Acesso: Buscar Cliente pelo ID do Usuário (Corrigido da versão anterior)
+    cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idUsuario)
+    if err != nil {
+        return nil, err
+    }
+    
+    vaga, err := uc.vagaRepo.BuscarPorID(ctx, idVaga)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Verificação de Autorização: O usuário deve ser o Cliente dono da Vaga
+    if cliente.ID != vaga.IDCliente {
+        return nil, errors.New("acesso negado: apenas o cliente que criou a vaga pode ver as propostas")
+    }
+    
+    // Busca no Repositório
+    propostas, err := uc.propostaRepo.ListarPorVaga(ctx, idVaga, filters, orderBy, orderDir, limit, offset)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Uso da função auxiliar
+    return mapPropostasToResponse(propostas), nil
+}
+
+func (uc *PropostaUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]PropostaResponse, error) {
+    // Acesso: Buscar Prestador pelo ID do Usuário
+    prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Busca no Repositório
+    propostas, err := uc.propostaRepo.ListarPorPrestador(ctx, prestador.ID, filters, orderBy, orderDir, limit, offset)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Uso da função auxiliar
+    return mapPropostasToResponse(propostas), nil
+}

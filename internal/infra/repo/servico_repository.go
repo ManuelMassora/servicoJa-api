@@ -19,12 +19,18 @@ func (r *ServicoRepository) Criar(ctx context.Context, servico *model.Servico) e
 	return r.db.WithContext(ctx).Create(servico).Error
 }
 
+func (r *ServicoRepository) Atualizar(ctx context.Context, servico *model.Servico) error {
+	return r.db.WithContext(ctx).Save(servico).Error
+}
+
 func (r *ServicoRepository) BuscarPorID(ctx context.Context, id uint) (*model.Servico, error) {
 	var servico model.Servico
 	err := r.db.WithContext(ctx).
 		Preload("Cliente").
 		Preload("Prestador").
-		Preload("Categoria").
+		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
+		Preload("Vaga").
 		First(&servico, id).Error
 	if err != nil {
 		return nil, err
@@ -44,13 +50,21 @@ func (r *ServicoRepository) ListarPorCliente(ctx context.Context, idCliente uint
 	query := r.db.WithContext(ctx).
 		Preload("Cliente").
 		Preload("Prestador").
-		Preload("Categoria").
+		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
+		Preload("Vaga").
 		Where("id_cliente = ?", idCliente)
 
 	// Apply filters
-	for field, value := range filters {
-		query = query.Where(field+" = ?", value)
-	}
+    for key, value := range filters {
+        switch v := value.(type) {
+        case string:           
+            query = query.Where(key+" LIKE ?", "%"+v+"%")
+        case uint, int:
+            query = query.Where(key+" = ?", v)
+        default:         
+        }
+    }
 
 	// Apply ordering
 	if orderBy != "" {
@@ -75,22 +89,26 @@ func (r *ServicoRepository) ListarPorCliente(ctx context.Context, idCliente uint
 	return servicos, nil
 }
 
-func (r *ServicoRepository) ListarDisponiveis(ctx context.Context, localizacao string, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Servico, error) {
+func (r *ServicoRepository) ListarPorPrestador(ctx context.Context, IDPrestador uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Servico, error) {
 	var servicos []model.Servico
 	query := r.db.WithContext(ctx).
 		Preload("Cliente").
 		Preload("Prestador").
-		Preload("Categoria").
-		Where("id_prestador IS NULL")
-
-	if localizacao != "" {
-		query = query.Where("localizacao LIKE ?", "%"+localizacao+"%")
-	}
+		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
+		Preload("Vaga").
+		Where("id_prestador =?", IDPrestador)
 
 	// Apply filters
-	for field, value := range filters {
-		query = query.Where(field+" = ?", value)
-	}
+    for key, value := range filters {
+        switch v := value.(type) {
+        case string:           
+            query = query.Where(key+" LIKE ?", "%"+v+"%")
+        case uint, int:
+            query = query.Where(key+" = ?", v)
+        default:         
+        }
+    }
 
 	// Apply ordering
 	if orderBy != "" {
