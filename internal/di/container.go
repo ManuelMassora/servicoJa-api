@@ -20,6 +20,7 @@ type Container struct {
 	ServicoRepo *repo.ServicoRepository
 	VagaRepo *repo.VagaRepository
 	PropostaRepo *repo.PropostaRepository
+	NotificacaoRepo *repo.NotificacaoRepo
 
 	//Services
 	AuthService *services.AuthUSer
@@ -33,6 +34,8 @@ type Container struct {
 	ServicoUC *usecases.ServicoUseCase
 	PropostaUC *usecases.PropostaUseCase
 	VagaUC *usecases.VagaUseCase
+	NotificacaoUC *usecases.NotificacaoUseCase
+		
 	//Handler
 	CategoriaH	*handler.CategoriaHandler
 	UsuarioH *handler.UsuarioHandler
@@ -42,6 +45,7 @@ type Container struct {
 	ServicoH *handler.ServicoHandler
 	PropostaH *handler.PropostaHandler
 	VagaH *handler.VagaHandler
+	NotificacaoH *handler.NotificacaoHandler
 }
 
 func NewContainer(db *gorm.DB) *Container {
@@ -57,6 +61,7 @@ func NewContainer(db *gorm.DB) *Container {
 	c.ServicoRepo = repo.NewServicoRepository(db).(*repo.ServicoRepository)
 	c.VagaRepo = repo.NewVagaRepository(db).(*repo.VagaRepository)
 	c.PropostaRepo = repo.NewPropostaRepository(db).(*repo.PropostaRepository)
+	c.NotificacaoRepo = repo.NewNotificacaoRepo(db).(*repo.NotificacaoRepo)
 
 	//Init Services
 	c.JwtService = middleware.NewJWTService()
@@ -64,11 +69,12 @@ func NewContainer(db *gorm.DB) *Container {
 	//Init UseCases
 	c.CategoriaUC = usecases.NewCategoriaUseCase(c.CategoriaRepo)
 	c.UsuarioUC = usecases.NewUsuarioUseCase(c.UsuarioRepo, c.ClienteRepo, c.PrestadorRepo)
-	c.CatalogoUC = usecases.NewCatalogoUC(c.CatalogoRepo, c.PrestadorRepo)
-	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.ClienteRepo, c.PrestadorRepo, c.CatalogoRepo, c.ServicoRepo)
-	c.ServicoUC = usecases.NewServicoUseCase(c.ServicoRepo, c.PrestadorRepo, c.ClienteRepo, c.AgendamentoRepo, c.VagaRepo)
-	c.PropostaUC = usecases.NewPropostaUseCase(c.PropostaRepo, c.PrestadorRepo, c.VagaRepo, c.ClienteRepo, c.ServicoRepo)
-	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo, c.ClienteRepo)
+	c.CatalogoUC = usecases.NewCatalogoUC(c.CatalogoRepo)
+	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.CatalogoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
+	c.ServicoUC = usecases.NewServicoUseCase(c.ServicoRepo, c.AgendamentoRepo, c.VagaRepo, c.NotificacaoRepo, c.UsuarioRepo)
+	c.PropostaUC = usecases.NewPropostaUseCase(c.PropostaRepo, c.VagaRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
+	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo)
+	c.NotificacaoUC = usecases.NewNotificacaoUseCase(c.NotificacaoRepo, c.UsuarioRepo)
 
 	//Init Handler
 	c.CategoriaH = handler.NewCategoriaHandler(*c.CategoriaUC)
@@ -79,5 +85,6 @@ func NewContainer(db *gorm.DB) *Container {
 	c.ServicoH = handler.NewServicoHandler(*c.ServicoUC)
 	c.PropostaH = handler.NewPropostaHandler(*c.PropostaUC)
 	c.VagaH = handler.NewVagaHandler(*c.VagaUC)
+	c.NotificacaoH = handler.NewNotificacaoHandler(*c.NotificacaoUC)
 	return c
 }

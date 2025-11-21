@@ -70,9 +70,14 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 	propostas := server.Group("propostas", middleware.Auth())
 	{
 		propostas.POST("", middleware.HasRole("PRESTADOR"), container.PropostaH.Criar)
-		propostas.POST("/aceitar/:id", middleware.HasRole("CLIENTE"), container.PropostaH.Responder)
+		propostas.POST("/responder/:id", middleware.HasRole("CLIENTE"), container.PropostaH.Responder)
 		propostas.POST("/cancelar/:id", middleware.HasRole("PRESTADOR"), container.PropostaH.Cancelar)
 		propostas.GET("/prestador", middleware.HasRole("PRESTADOR"), container.PropostaH.ListarPorPrestador)
-		propostas.GET("/cliente", middleware.HasRole("CLIENTE"), container.PropostaH.ListarPorVaga)
+		propostas.GET("/cliente/:idVaga", middleware.HasRole("CLIENTE"), container.PropostaH.ListarPorVaga)
+	}
+	notificacao := server.Group("notificacao", middleware.Auth())
+	{
+		notificacao.GET("", container.NotificacaoH.ListarPorUsuario)
+		notificacao.POST("/lida/:id", container.NotificacaoH.MarcarComoLida)
 	}
 }

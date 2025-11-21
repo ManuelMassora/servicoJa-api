@@ -24,6 +24,16 @@ func (m *MockUsuarioRepo) BuscarPorID(ctx context.Context, id uint) (*model.Usua
 	return args.Get(0).(*model.Usuario), args.Error(1)
 }
 
+func (m *MockUsuarioRepo) IncrementarNotificacoesNovas(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockUsuarioRepo) ZerarNotificacoesNovas(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func (m *MockUsuarioRepo) BuscarPorTelefone(ctx context.Context, numero string) (*model.Usuario, error) {
 	args := m.Called(ctx, numero)
 	if args.Get(0) == nil {

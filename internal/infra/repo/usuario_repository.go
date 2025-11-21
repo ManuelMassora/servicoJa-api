@@ -30,6 +30,26 @@ func (r *UsuarioRepository) BuscarPorID(ctx context.Context, id uint) (*model.Us
 	return &usuario, nil
 }
 
+func (r *UsuarioRepository) IncrementarNotificacoesNovas(ctx context.Context, id uint) error {
+	var usuario model.Usuario
+	err := r.db.WithContext(ctx).First(&usuario, id).Error
+	if err != nil {
+		return err
+	}
+	usuario.NotificacoesNovas++
+	return r.db.WithContext(ctx).Save(&usuario).Error
+}
+
+func (r *UsuarioRepository) ZerarNotificacoesNovas(ctx context.Context, id uint) error {
+	var usuario model.Usuario
+	err := r.db.WithContext(ctx).First(&usuario, id).Error
+	if err != nil {
+		return err
+	}
+	usuario.NotificacoesNovas=0
+	return r.db.WithContext(ctx).Save(&usuario).Error
+}
+
 func (r *UsuarioRepository) BuscarPorTelefone(ctx context.Context, telefone string) (*model.Usuario, error) {
 	var usuario model.Usuario
 	err := r.db.WithContext(ctx).
@@ -98,19 +118,8 @@ func (r *ClienteRepository) BuscarPorID(ctx context.Context, id uint) (*model.Cl
 	var cliente model.Cliente
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
-		First(&cliente, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &cliente, nil
-}
-
-func (r *ClienteRepository) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Cliente, error) {
-	var cliente model.Cliente
-	err := r.db.WithContext(ctx).
-		Preload("Usuario").
 		Where("usuario_id", id).
-		First(&cliente).Error
+		First(&cliente, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -172,19 +181,8 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id uint) (*model.
 	var prestador model.Prestador
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
-		First(&prestador, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &prestador, nil
-}
-
-func (r *PrestadorRepository) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Prestador, error) {
-	var prestador model.Prestador
-	err := r.db.WithContext(ctx).
-		Preload("Usuario").
 		Where("usuario_id", id).
-		First(&prestador).Error
+		First(&prestador, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -194,39 +192,28 @@ func (r *PrestadorRepository) BuscarPorUsuarioID(ctx context.Context, id uint) (
 func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
 	var prestadores []model.Prestador
 	query := r.db.WithContext(ctx).Preload("Usuario")
-
-	// 1. Aplica filtros de string (usando LIKE)
-	for field, value := range filters {
-		// Assume que todos os filtros no mapa 'filters' são strings para a busca LIKE
-		// Você pode precisar de uma verificação de tipo mais robusta aqui,
-		// mas seguindo sua implementação original, faremos o Type Assertion
+	for field, value := range filters {		
 		if strVal, ok := value.(string); ok {
 			query = query.Where(field+" LIKE ?", "%"+strVal+"%")
 		}
 	}
-
-	// 2. Aplica filtro StatusDisponivel (booleano, busca exata)
-	// O parâmetro foi alterado para 'interface{}' para permitir nil ou um bool.
 	if statusDisponivel != nil {
 		if boolVal, ok := statusDisponivel.(bool); ok {
 			query = query.Where("status_disponivel = ?", boolVal)
 		}
 	}
-	
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
 		}
 		query = query.Order(orderBy + " " + orderDir)
 	}
-
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 	if offset > 0 {
 		query = query.Offset(offset)
 	}
-
 	err := query.Find(&prestadores).Error
 	if err != nil {
 		return nil, err

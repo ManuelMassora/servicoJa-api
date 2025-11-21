@@ -7,9 +7,9 @@ type Avaliacao struct {
 	Nota       int    `json:"nota"`
 	Comentario string `json:"comentario"`
 	UsuarioID  uint  `json:"usuario_id"`
-	Usuario		Usuario 	`gorm:"foreignKey:UsuarioID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"usuario,omitempty"`
+	Usuario		Usuario 	`gorm:"foreignKey:UsuarioID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"usuario,omitempty"`
 	ServicoID  uint  `json:"servico_id"`
-	Servico		Servico		`gorm:"foreignKey:ServicoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"servico,omitempty"`
+	Servico		Servico		`gorm:"foreignKey:ServicoID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"servico,omitempty"`
 }
 
 type AvaliacaoRepo interface {

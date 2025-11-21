@@ -9,9 +9,9 @@ type Agendamento struct {
 	BaseModel
 	Detalhe 	string `json:"detalhe"`
 	IDCatalogo  uint  `json:"id_catalogo"`
-	Catalogo	Catalogo		`gorm:"foreignKey:IDCatalogo;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"catalogo,omitempty"`
+	Catalogo	Catalogo		`gorm:"foreignKey:IDCatalogo;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"catalogo,omitempty"`
 	IDCliente  	uint  `json:"id_cliente"`
-	Cliente		Cliente		`gorm:"foreignKey:IDCliente;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"cliente,omitempty"`
+	Cliente		Cliente		`gorm:"foreignKey:IDCliente;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"cliente,omitempty"`
 	DataHora 	time.Time      `json:"datahora"`
 	Status		string         `json:"status"`
 }

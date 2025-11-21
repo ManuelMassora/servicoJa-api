@@ -5,9 +5,9 @@ import "context"
 type Transacao struct {
 	BaseModel
 	IDUsuario     uint        `json:"usuario_id" gorm:"not null"`
-	Usuario       *Usuario     `gorm:"foreignKey:IDUsuario;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"usuario,omitempty"`
+	Usuario       *Usuario     `gorm:"foreignKey:IDUsuario;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"usuario,omitempty"`
 	IDServico     uint        `json:"servico_id" gorm:"not null"`
-	Servico       *Servico     `gorm:"foreignKey:IDServico;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"servico,omitempty"`
+	Servico       *Servico     `gorm:"foreignKey:IDServico;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"servico,omitempty"`
 	TipoMovimento TipoMovimento `json:"tipo_movimento" gorm:"column:tipo_movimento;not null"`
 	Valor         float64      `json:"valor" gorm:"column:valor;not null"`
 	Metodo        string       `json:"metodo" gorm:"column:metodo;not null"`

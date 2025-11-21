@@ -10,24 +10,24 @@ import (
 
 type AgendamentoUC struct {
 	r model.AgendamentoRepo
-	clienteRepo model.ClienteRepo
-	pretadorRepo model.PrestadorRepo
 	catalogoRepo model.CatalogoRepo
 	servico model.ServicoRepo
+	notifacaoRepo model.NotificacaoRepo
+	usuarioRepo model.UsuarioRepo
 }
 
 func NewAgendamentoUC(
 	r model.AgendamentoRepo,
-	clienteRepo model.ClienteRepo,
-	pretadorRepo model.PrestadorRepo,
 	catalogoRepo model.CatalogoRepo,
 	servico model.ServicoRepo,
+	notifacaoRepo model.NotificacaoRepo,
+	usuarioRepo model.UsuarioRepo,
 ) *AgendamentoUC {
 	return &AgendamentoUC{r: r,
-		clienteRepo: clienteRepo,
-		pretadorRepo: pretadorRepo,
 		catalogoRepo: catalogoRepo,
 		servico: servico,
+		notifacaoRepo: notifacaoRepo,
+		usuarioRepo: usuarioRepo,
 	}
 }
 
@@ -48,14 +48,31 @@ type AgendamentoResponse struct {
 }
 
 func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) error {
-	cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idCliente)
-	if err != nil || cliente == nil {
-		return errors.New("cliente não encontrado")
+	catalogo, err := uc.catalogoRepo.FindByID(ctx, req.IDCatalogo)
+	if err != nil {
+		return err
+	}
+	// // Verificar se o prestador está disponível na data/hora solicitada
+	// if !catalogo.Prestador.DisponivelNaDataHora(ctx, req.DataHora) {
+	// 	return errors.New("o prestador não está disponível na data/hora solicitada")
+	// }
+	// // Criar a notificação para o prestador
+	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: catalogo.Prestador.IDUsuario,
+		Titulo: "Novo Agendamento",
+		Mensagem: "Você tem um novo agendamento para o serviço: " + catalogo.Nome,
+	})
+	if err != nil {
+		return err
+	}
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, catalogo.Prestador.IDUsuario)
+	if err != nil {
+		return err
 	}
 	return uc.r.Criar(ctx, &model.Agendamento{
 		Detalhe: req.Detalhe,
 		IDCatalogo: req.IDCatalogo,
-		IDCliente: cliente.ID,
+		IDCliente: idCliente,
 		DataHora: req.DataHora,
 		Status: "PENDENTE",
 	})
@@ -67,8 +84,8 @@ func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*
 	if err != nil {
 		return nil, err
 	}
-	clienteIDUsuario := agendamento.Cliente.Usuario.ID 	
-	prestadorIDUsuario := agendamento.Catalogo.Prestador.Usuario.ID
+	clienteIDUsuario := agendamento.Cliente.IDUsuario
+	prestadorIDUsuario := agendamento.Catalogo.Prestador.IDUsuario
 	
 	if idUsuario != clienteIDUsuario && idUsuario != prestadorIDUsuario {
 		return nil, errors.New("acesso negado: você não é o cliente nem o prestador deste agendamento")
@@ -97,6 +114,18 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 	if agendamento.Status == "EM_ANDAMENTO" {
 		return nil
 	}
+	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: agendamento.IDCliente,
+		Titulo: "Resposta ao Agendamento",
+		Mensagem: "Seu agendamento foi aceito para o serviço: " + agendamento.Catalogo.Nome,
+	})
+	if err != nil {
+		return err
+	}
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, agendamento.IDCliente)
+	if err != nil {
+		return err
+	}
 	servico := &model.Servico{
 		IDAgendamento: &id,
 		Localizacao: agendamento.Catalogo.Localizacao,
@@ -121,6 +150,18 @@ func (uc *AgendamentoUC) Recusar(ctx context.Context, id uint, idUsuario uint) e
 	prestadorIDUsuario := agendamento.Catalogo.Prestador.Usuario.ID
 	if idUsuario != prestadorIDUsuario {
 		return errors.New("acesso negado: você não é o prestador deste agendamento")
+	}
+	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: agendamento.IDCliente,
+		Titulo: "Resposta ao Agendamento",
+		Mensagem: "Seu agendamento foi recusado para o serviço: " + agendamento.Catalogo.Nome,
+	})
+	if err != nil {
+		return err
+	}
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, agendamento.IDCliente)
+	if err != nil {
+		return err
 	}
 	return uc.r.AtualizarStatus(ctx, id, "RECUSADO")
 }
@@ -161,11 +202,7 @@ func (uc *AgendamentoUC) Listar(ctx context.Context, filters map[string]interfac
 }
 
 func (uc *AgendamentoUC) ListarPorClienteID(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoResponse, error) {
-	cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return nil, err
-	}
-	agendamentos, err := uc.r.ListarPorClienteID(ctx, cliente.ID, filters, orderBy, orderDir, limit, offset)
+	agendamentos, err := uc.r.ListarPorClienteID(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -185,15 +222,11 @@ func (uc *AgendamentoUC) ListarPorClienteID(ctx context.Context, idUsuario uint,
 }
 
 func (uc *AgendamentoUC) ListarPorCatalogID(ctx context.Context, idUsuario, idCatalogo uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoResponse, error) {
-	prestador, err := uc.pretadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return nil, err
-	}
 	catalogo, err := uc.catalogoRepo.FindByID(ctx, idCatalogo)
 	if err != nil {
 		return nil, err
 	}
-	if catalogo.IDPrestador != prestador.ID {
+	if catalogo.IDPrestador != idUsuario {
 		return nil, errors.New("acesso negado: você não é o prestador deste catálogo")
 	}
 	agendamentos, err := uc.r.ListarPorCatalogID(ctx, catalogo.ID, filters, orderBy, orderDir, limit, offset)

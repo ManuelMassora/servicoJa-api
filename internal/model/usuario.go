@@ -11,16 +11,19 @@ import (
 
 type Usuario struct {
 	BaseModel
-	Nome     string `json:"nome"`
-	Telefone string `gorm:"unique" json:"telefone"`
-	Senha    string `json:"senha,omitempty"`
-	RolePermissaoID   uint
-	RolePermissao     RolePermissao  `gorm:"foreignKey:RolePermissaoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"rolepermissao,omitempty"`
+	Nome     			string 	`json:"nome"`
+	Telefone 			string 	`gorm:"unique" json:"telefone"`
+	Senha    			string 	`json:"senha,omitempty"`
+	NotificacoesNovas 	uint 	`json:"notificacoes_novas"`
+	RolePermissaoID   	uint
+	RolePermissao     	RolePermissao  `gorm:"foreignKey:RolePermissaoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"rolepermissao,omitempty"`
 }
 
 type UsuarioRepo interface {
 	Criar(ctx context.Context, usuario *Usuario) error
 	BuscarPorID(ctx context.Context, id uint) (*Usuario, error)
+	IncrementarNotificacoesNovas(ctx context.Context, id uint) error
+	ZerarNotificacoesNovas(ctx context.Context, id uint) error
 	BuscarPorTelefone(ctx context.Context, numero string) (*Usuario, error)
 	Atualizar(ctx context.Context, usuario *Usuario) error
 	Remover(ctx context.Context, id uint) error
@@ -29,26 +32,26 @@ type UsuarioRepo interface {
 
 // Cliente representa a ligação de um usuário com o perfil de cliente.
 type Cliente struct {
-	BaseModel
-	UsuarioID uint   `json:"usuario_id" gorm:"not null"`
-	Usuario   Usuario `gorm:"foreignKey:UsuarioID;references:ID" json:"usuario,omitempty"`
+	IDUsuario 	uint    `gorm:"primaryKey"`
+    Usuario   	Usuario `gorm:"constraint:OnDelete:CASCADE;foreignKey:IDUsuario;references:ID"`
+	Nome     	string 	`json:"nome"`
+	Telefone 	string 	`json:"telefone"`
 }
 
 type ClienteRepo interface {
 	Criar(ctx context.Context, cliente *Cliente) error
 	BuscarPorID(ctx context.Context, id uint) (*Cliente, error)
-	BuscarPorUsuarioID(ctx context.Context, id uint) (*Cliente, error)
 	Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Cliente, error)
 }
 
 // Prestador representa o perfil de prestador ligado a um usuário.
 type Prestador struct {
-	BaseModel
-	UsuarioID       	uint    	`json:"usuario_id" gorm:"not null"`
-	Usuario         	Usuario 	`gorm:"foreignKey:UsuarioID;references:ID" json:"usuario,omitempty"`
+	IDUsuario 			uint    	`gorm:"primaryKey"`
+    Usuario   			Usuario 	`gorm:"constraint:OnDelete:CASCADE;foreignKey:IDUsuario;references:ID"`
+	Nome     			string 		`json:"nome"`
+	Telefone 			string 		`json:"telefone"`
 	Localizacao     	string   	`json:"localizacao"`
 	StatusDisponivel 	bool    	`json:"status_disponivel"`
-	RaioAtuacao     	float64  	`json:"raio_atuacao"`
 	Reputacao       	float64  	`json:"reputacao"`
 }
 
@@ -56,7 +59,6 @@ type PrestadorRepo interface {
 	Criar(ctx context.Context, prestador *Prestador) error
 	AtualizarStatus(ctx context.Context, id uint, disponivel bool) error
 	BuscarPorID(ctx context.Context, id uint) (*Prestador, error)
-	BuscarPorUsuarioID(ctx context.Context, id uint) (*Prestador, error)
 	Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)
 }
 
@@ -140,11 +142,13 @@ func NewCliente(nome, telefone, senha string) (*Cliente,error) {
 			Senha: senhaHash,
 			RolePermissaoID: 1,
 		},
+		Nome: nome,
+		Telefone: telefone,
 	}
 	return cliente, nil
 }
 
-func NewPrestador(localizacao string, raio_atuacao float64, nome string, telefone, senha string) (*Prestador,error) {
+func NewPrestador(localizacao string, nome string, telefone, senha string) (*Prestador,error) {
 	if nome == "" {
         return nil, errors.New("nome não pode ser vazio")
     }
@@ -170,8 +174,9 @@ func NewPrestador(localizacao string, raio_atuacao float64, nome string, telefon
 			Senha: senhaHash,
 			RolePermissaoID: 2,
 		},
+		Nome: nome,
+		Telefone: telefone,
 		Localizacao: localizacao,
-		RaioAtuacao: raio_atuacao,
 		StatusDisponivel: true,
 	}
 	return prestador, nil

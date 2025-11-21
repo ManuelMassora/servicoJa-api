@@ -10,10 +10,10 @@ import (
 
 type ServicoUseCase struct {
 	r model.ServicoRepo
-	prestadorRepo model.PrestadorRepo
-	clienteRepo model.ClienteRepo
 	agendamentoRepo model.AgendamentoRepo
 	vagaRepo model.VagaRepo
+	notificacaoRepo model.NotificacaoRepo
+    usuarioRepo model.UsuarioRepo
 }
 
 type ServicoResponse struct {
@@ -29,13 +29,13 @@ type ServicoResponse struct {
 	Prestador  		uint      	`json:"prestador"`
 }
 
-func NewServicoUseCase(r model.ServicoRepo, prestadorRepo model.PrestadorRepo, clienteRepo model.ClienteRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo) *ServicoUseCase {
+func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo) *ServicoUseCase {
 	return &ServicoUseCase{
 		r: r,
-		prestadorRepo: prestadorRepo,
-		clienteRepo: clienteRepo,
 		agendamentoRepo: agendamentoRepo,
 		vagaRepo: vagaRepo,
+		notificacaoRepo: notificacaoRepo,
+        usuarioRepo: usuarioRepo,
 	}
 }
 
@@ -44,18 +44,26 @@ func (uc *ServicoUseCase) FinalizarServico(ctx context.Context, idServico, idUsu
 	if err != nil {
 		return err
 	}
-
-	if servico.Cliente.UsuarioID != idUsuario && servico.Prestador.UsuarioID != idUsuario {
+	if servico.Cliente.IDUsuario != idUsuario && servico.Prestador.IDUsuario != idUsuario {
 		return errors.New("usuário não autorizado a finalizar este serviço")
 	}
-
 	if servico.Status == model.StatusConcluido || servico.Status == model.StatusCancelado {
 		return nil
 	}
-
+	err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: servico.IDCliente,
+		Titulo: "Serviço Concluído",
+		Mensagem: "O serviço foi concluído com sucesso. Obrigado por usar nossos serviços!",
+	})
+	if err != nil {
+		return err
+	}
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, servico.IDCliente)
+	if err != nil {
+		return err
+	}
 	servico.Status = model.StatusConcluido
 	servico.DataHoraFim = time.Now()
-
 	return uc.r.Atualizar(ctx, servico)
 }
 
@@ -64,8 +72,20 @@ func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsua
 	if err != nil {
 		return err
 	}
-	if servico.Cliente.UsuarioID != idUsuario && servico.Prestador.UsuarioID != idUsuario {
-		return errors.New("usuário não autorizado a finalizar este serviço")
+	err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: servico.IDCliente,
+		Titulo: "Serviço Cancelado",
+		Mensagem: "O serviço foi cancelado com sucesso. Esperamos que tenha gostado de nossos serviços!",
+	})
+	if err != nil {
+		return err
+	}
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, servico.IDCliente)
+	if err != nil {
+		return err
+	}
+	if servico.Cliente.IDUsuario != idUsuario && servico.Prestador.IDUsuario != idUsuario {
+		return errors.New("usuário não autorizado a cancelar este serviço")
 	}
 	if servico.Status == model.StatusConcluido || servico.Status == model.StatusCancelado {
 		return nil
@@ -80,11 +100,7 @@ func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsua
 }
 
 func (uc *ServicoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]ServicoResponse, error) {
-	cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return nil, err
-	}
-	servicos, err := uc.r.ListarPorCliente(ctx, cliente.ID, filters, orderBy, orderDir, limit, offset)
+	servicos, err := uc.r.ListarPorCliente(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -110,11 +126,7 @@ func (uc *ServicoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, 
 }
 
 func (uc *ServicoUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]ServicoResponse, error) {
-	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return nil, err
-	}
-	servicos, err := uc.r.ListarPorPrestador(ctx, prestador.ID, filters, orderBy, orderDir, limit, offset)
+	servicos, err := uc.r.ListarPorPrestador(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}

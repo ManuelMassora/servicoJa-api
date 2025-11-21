@@ -3,21 +3,18 @@ package usecases
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 )
 
 type CatalogoUseCase struct {
 	r model.CatalogoRepo
-	prestadorRepo model.PrestadorRepo
 }
 
 func NewCatalogoUC(
 	r model.CatalogoRepo,
-	prestadorRepo model.PrestadorRepo,
 	) *CatalogoUseCase{
-	return &CatalogoUseCase{r: r, prestadorRepo: prestadorRepo}
+	return &CatalogoUseCase{r: r}
 }
 
 type RequestCreateCatalogo struct {
@@ -39,20 +36,14 @@ type ResponseCatalogo struct {
 }
 
 func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
-	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idPrestador)
-	if err != nil {
-		return err
-	}
 	catalogo := &model.Catalogo{
 		Nome: request.Nome,
 		Descricao: request.Descricao,
 		PrecoBase: request.PrecoBase,
 		IDCategoria: request.IdCategoria,
-		IDPrestador: prestador.ID,
+		IDPrestador: idPrestador,
 		Localizacao: request.Localizacao,
 	}
-	log.Printf("Id do Usuario: %d", idPrestador)
-	log.Printf("Id do prestador: %d", prestador.ID)
 	return uc.r.Create(ctx,catalogo)
 }
 
@@ -61,11 +52,7 @@ func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador uint, campo
 	if err != nil {
 		return err
 	}
-	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idPrestador)
-	if err != nil {
-		return err
-	}
-	if catalogo.IDPrestador != prestador.ID {
+	if catalogo.IDPrestador != idPrestador {
 		return errors.New("nao tem permissao para apagar esse catalogo")
 	}
 	return uc.r.Update(ctx, id, campos)
@@ -76,11 +63,7 @@ func(uc *CatalogoUseCase) Apagar(ctx context.Context, id, idPrestador uint) erro
 	if err != nil {
 		return err
 	}
-	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idPrestador)
-	if err != nil {
-		return err
-	}
-	if catalogo.IDPrestador != prestador.ID {
+	if catalogo.IDPrestador != idPrestador {
 		return errors.New("nao tem permissao para apagar esse catalogo")
 	}
 	return uc.r.Delete(ctx, id)

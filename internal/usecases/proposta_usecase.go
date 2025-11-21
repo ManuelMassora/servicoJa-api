@@ -10,25 +10,25 @@ import (
 
 type PropostaUseCase struct {
 	propostaRepo model.PropostaRepo
-	prestadorRepo model.PrestadorRepo
-	clienteRepo model.ClienteRepo
 	vagaRepo model.VagaRepo
 	servicoRepo model.ServicoRepo
+    notificacaoRepo model.NotificacaoRepo
+    usuarioRepo model.UsuarioRepo
 }
 
 func NewPropostaUseCase(
 	propostaRepo model.PropostaRepo,
-	prestadorRepo model.PrestadorRepo,
 	vagaRepo model.VagaRepo,
-	clienteRepo model.ClienteRepo,
 	servicoRepo model.ServicoRepo,
+    notificacaoRepo model.NotificacaoRepo,
+    usuarioRepo model.UsuarioRepo,
 	) *PropostaUseCase {
 	return &PropostaUseCase{
-		propostaRepo: propostaRepo, 
-		prestadorRepo: prestadorRepo, 
+		propostaRepo: propostaRepo,  
 		vagaRepo: vagaRepo, 
-		clienteRepo: clienteRepo,
 		servicoRepo: servicoRepo,
+        notificacaoRepo: notificacaoRepo,
+        usuarioRepo: usuarioRepo,
 	}
 }
 
@@ -54,13 +54,25 @@ type PropostaResponse struct {
 }
 
 func (uc *PropostaUseCase) Criar(ctx context.Context, request PropostaRequest, idUsuario uint) error {
-	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
+    vaga, err := uc.vagaRepo.BuscarPorID(ctx, request.IDVaga)
+    if err != nil {
+        return err
+    }
+    err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: vaga.IDCliente,
+		Titulo: "Nova Proposta",
+		Mensagem: "Você tem uma nova proposta na vaga: " + vaga.Titulo,
+	})
+	if err != nil {
+		return err
+	}
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, vaga.IDCliente)
 	if err != nil {
 		return err
 	}
 	proposta := &model.Proposta{
 		IDVaga:         request.IDVaga,
-		IDPrestador:    prestador.ID,
+		IDPrestador:    idUsuario,
 		ValorProposto:  request.ValorProposto,
 		Mensagem:       request.Mensagem,
 		PrazoEstimado:  request.PrazoEstimado,
@@ -71,11 +83,7 @@ func (uc *PropostaUseCase) Criar(ctx context.Context, request PropostaRequest, i
 
 
 
-func (uc *PropostaUseCase) Aceitar(ctx context.Context, idProposta, idUsuario uint, aceitar bool) error {
-    cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idUsuario)
-    if err != nil {
-        return err
-    }
+func (uc *PropostaUseCase) Responder(ctx context.Context, idProposta, idUsuario uint, aceitar bool) error {
     proposta, err := uc.propostaRepo.BuscarPorID(ctx, idProposta)
     if err != nil {
         return err
@@ -84,7 +92,7 @@ func (uc *PropostaUseCase) Aceitar(ctx context.Context, idProposta, idUsuario ui
     if err != nil {
         return err
     }
-    if vaga.IDCliente != cliente.ID {
+    if vaga.IDCliente != idUsuario {
         return errors.New("acesso negado: apenas o cliente dono da vaga pode responder a proposta")
     }
     if proposta.Status != model.StatusPendente {
@@ -92,10 +100,21 @@ func (uc *PropostaUseCase) Aceitar(ctx context.Context, idProposta, idUsuario ui
     }
     proposta.DataResposta = time.Now()
     if aceitar {
+        err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
+		    IDUsuario: proposta.IDPrestador,
+		    Titulo: "Proposta Aceita",
+		    Mensagem: "Parabéns! A sua proposta foi aceita na vaga: " + vaga.Titulo,
+	    })
+	    if err != nil {
+		    return err
+	    }
+        err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, proposta.IDPrestador)
+        if err != nil {
+            return err
+        }
         proposta.Status = model.StatusAceito
         servico := &model.Servico{
             IDVaga:          &proposta.IDVaga,
-            
             Localizacao: vaga.Localizacao, 
             Preco:           proposta.ValorProposto,
             Status:          model.StatusEmAndamento,
@@ -107,21 +126,29 @@ func (uc *PropostaUseCase) Aceitar(ctx context.Context, idProposta, idUsuario ui
             return err
         }
     } else {
+        err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
+		    IDUsuario: proposta.IDPrestador,
+		    Titulo: "Proposta Rejeitada",
+		    Mensagem: "Infelismente a sua proposta foi rejeitada na vaga: " + vaga.Titulo,
+	    })
+	    if err != nil {
+		    return err
+	    }
+        err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, proposta.IDPrestador)
+        if err != nil {
+            return err
+        }
         proposta.Status = model.StatusRejeitado
     }
     return uc.propostaRepo.Salvar(ctx, proposta)
 }
 
 func (uc *PropostaUseCase) Cancelar(ctx context.Context, idProposta, idUsuario uint) error {
-	prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return err
-	}
 	proposta, err := uc.propostaRepo.BuscarPorID(ctx, idProposta)
 	if err != nil {
 		return err
 	}
-	if proposta.IDPrestador != prestador.ID {
+	if proposta.IDPrestador != idUsuario {
 		return errors.New("acesso negado: apenas o prestador que fez a proposta pode cancelá-la")
 	}
 	proposta.Status = model.StatusCancelado
@@ -167,19 +194,13 @@ func mapPropostasToResponse(propostas []model.Proposta) []PropostaResponse {
 }
 
 func (uc *PropostaUseCase) ListarPorVaga(ctx context.Context, idUsuario, idVaga uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]PropostaResponse, error) {
-    // Acesso: Buscar Cliente pelo ID do Usuário (Corrigido da versão anterior)
-    cliente, err := uc.clienteRepo.BuscarPorUsuarioID(ctx, idUsuario)
-    if err != nil {
-        return nil, err
-    }
-    
     vaga, err := uc.vagaRepo.BuscarPorID(ctx, idVaga)
     if err != nil {
         return nil, err
     }
     
     // Verificação de Autorização: O usuário deve ser o Cliente dono da Vaga
-    if cliente.ID != vaga.IDCliente {
+    if idUsuario != vaga.IDCliente {
         return nil, errors.New("acesso negado: apenas o cliente que criou a vaga pode ver as propostas")
     }
     
@@ -194,14 +215,8 @@ func (uc *PropostaUseCase) ListarPorVaga(ctx context.Context, idUsuario, idVaga 
 }
 
 func (uc *PropostaUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]PropostaResponse, error) {
-    // Acesso: Buscar Prestador pelo ID do Usuário
-    prestador, err := uc.prestadorRepo.BuscarPorUsuarioID(ctx, idUsuario)
-    if err != nil {
-        return nil, err
-    }
-    
     // Busca no Repositório
-    propostas, err := uc.propostaRepo.ListarPorPrestador(ctx, prestador.ID, filters, orderBy, orderDir, limit, offset)
+    propostas, err := uc.propostaRepo.ListarPorPrestador(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
     if err != nil {
         return nil, err
     }

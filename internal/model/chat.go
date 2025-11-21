@@ -7,9 +7,9 @@ type Chat struct {
 	ServicoID   int64    `json:"servico_id"`
 	Servico     *Servico `gorm:"foreignKey:ServicoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"servico,omitempty"`
 	PrestadorID int64    `json:"prestador_id"`
-	Prestador   *Usuario `gorm:"foreignKey:PrestadorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"prestador,omitempty"`
+	Prestador   *Prestador `gorm:"foreignKey:PrestadorID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"prestador,omitempty"`
 	IDCliente   int64    `json:"cliente_id"`
-	Cliente     *Usuario `gorm:"foreignKey:IDCliente;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"cliente,omitempty"`
+	Cliente     *Prestador `gorm:"foreignKey:IDCliente;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"cliente,omitempty"`
 }
 
 type Mensagem struct {

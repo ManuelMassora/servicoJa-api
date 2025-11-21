@@ -102,7 +102,6 @@ func TestUsuarioUseCase_CriarPrestador_Sucesso(t *testing.T) {
 			Senha:    "senha789",
 		},
 		Localizacao:   "Maputo",
-		RaioAtuacao:   15.5,
 	}
 
 	usuarioRepo.On("BuscarPorTelefone", ctx, req.Usuario.Telefone).Return((*model.Usuario)(nil), gorm.ErrRecordNotFound)
@@ -152,7 +151,6 @@ func TestUsuarioUseCase_ListarPrestadores(t *testing.T) {
 		{
 			Usuario: model.Usuario{Nome: "Prest 1", Telefone: "333"},
 			Localizacao: "Matola",
-			RaioAtuacao: 20.0,
 			StatusDisponivel: true,
 		},
 	}
@@ -163,7 +161,7 @@ func TestUsuarioUseCase_ListarPrestadores(t *testing.T) {
 	resp, err := uc.ListarPrestadores(ctx, nil, true, "", "", 10, 0)
 	assert.NoError(t, err)
 	assert.Len(t, resp, 1)
-	assert.Equal(t, "Prest 1", resp[0].Usuario.Nome)
+	assert.Equal(t, "Prest 1", resp[0].Nome)
 	assert.True(t, resp[0].Disponivel)
 
 	prestadorRepo.AssertExpectations(t)

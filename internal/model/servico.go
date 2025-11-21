@@ -10,7 +10,7 @@ type Servico struct {
 	Localizacao string   `gorm:"column:localizacao;size:255;not null" json:"localizacao"`
 	Preco       float64  `gorm:"column:preco;type:decimal(10,2);not null" json:"preco"`
 	Status      Status   `gorm:"column:status;type:varchar(20);not null" json:"status"`
-	IDAgendamento   *uint    `gorm:"column:id_agendamento;type:bigint;not null" json:"id_agendamento,omitempty"`
+	IDAgendamento   *uint    `gorm:"column:id_agendamento;type:bigint;" json:"id_agendamento,omitempty"`
 	Agendamento     *Agendamento `gorm:"foreignKey:IDAgendamento;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"agendamento,omitempty"`
 	IDVaga *uint `gorm:"column:id_vaga;type:bigint;default:null" json:"id_vaga,omitempty"`
 	Vaga   *Vaga `gorm:"foreignKey:IDVaga;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"vaga,omitempty"`

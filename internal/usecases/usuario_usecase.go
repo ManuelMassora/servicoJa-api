@@ -40,13 +40,12 @@ type UsuarioResponse struct {
 type PrestadorRequest struct {
 	Usuario UsuarioRequest	`json:"usuario" binding:"required"`
 	Localizacao     string   `json:"localizacao" binding:"required"`
-	RaioAtuacao     float64  `json:"raio_atuacao" binding:"required"`
 }
 
 type PrestadorResponse struct {
-	Usuario UsuarioResponse	`json:"usuario"`
+	Nome     string `json:"nome"`
+	Telefone string `json:"telefone"`
 	Localizacao     string  `json:"localizacao"`
-	RaioAtuacao     float64 `json:"raio_atuacao"`
 	Disponivel     	bool  	`json:"disponivel"`
 }
 
@@ -79,7 +78,6 @@ func (uc *UsuarioUseCase) CriarPrestador(ctx context.Context, request PrestadorR
 	}
 	prestador, err := model.NewPrestador(
 		request.Localizacao,
-		request.RaioAtuacao,
 		request.Usuario.Nome,
 		request.Usuario.Telefone,
 		request.Usuario.Senha)
@@ -114,12 +112,9 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
 		response = append(response, PrestadorResponse{
-			Usuario: UsuarioResponse{
-				Nome: p.Usuario.Nome,
-				Telefone: p.Usuario.Telefone,
-			},
+			Nome: p.Nome,
+			Telefone: p.Telefone,
 			Localizacao: p.Localizacao,
-			RaioAtuacao: p.RaioAtuacao,
 			Disponivel: p.StatusDisponivel,
 		})
 	}

@@ -10,11 +10,10 @@ import (
 
 type VagaUseCase struct {
 	vagaRepo model.VagaRepo
-	clienteRep model.ClienteRepo
 }
 
-func NewVagaUseCase(vagaRepo model.VagaRepo, clienteRep model.ClienteRepo) *VagaUseCase {
-	return &VagaUseCase{vagaRepo: vagaRepo, clienteRep: clienteRep}
+func NewVagaUseCase(vagaRepo model.VagaRepo) *VagaUseCase {
+	return &VagaUseCase{vagaRepo: vagaRepo}
 }
 
 type VagaRequest struct {
@@ -38,32 +37,24 @@ type VagaResponse struct {
 }
 
 func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) error {
-	cliente, err := uc.clienteRep.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return err
-	}
 	vaga := &model.Vaga{
 		Titulo:      req.Titulo,
 		Descricao:   req.Descricao,
 		Localizacao: req.Localizacao,
 		Preco:       req.Preco,
 		Status:      model.StatusDisponivel,
-		IDCliente:   cliente.ID,
+		IDCliente:   idUsuario,
 		Urgente:     req.Urgente,
 	}
 	return uc.vagaRepo.Criar(ctx, vaga)
 }
 
 func(uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) error {
-	cliente, err := uc.clienteRep.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return err
-	}
 	vaga, err := uc.vagaRepo.BuscarPorID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if vaga.IDCliente != cliente.ID {
+	if vaga.IDCliente != idUsuario {
 		return errors.New("vaga não pertence ao cliente")
 	}
 	vaga.DeletedAt.Time = time.Now()
@@ -99,11 +90,7 @@ func(uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[st
 }
 
 func(uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
-	cliente, err := uc.clienteRep.BuscarPorUsuarioID(ctx, idUsuario)
-	if err != nil {
-		return nil, err
-	}
-	vagas, err := uc.vagaRepo.ListarPorCliente(ctx, cliente.ID, filters, orderBy, orderDir, limit, offset)
+	vagas, err := uc.vagaRepo.ListarPorCliente(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}

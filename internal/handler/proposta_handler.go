@@ -64,7 +64,7 @@ func (h *PropostaHandler) Responder(c *gin.Context) {
 		return
 	}
 	
-	err = h.uc.Aceitar(c.Request.Context(), uint(idProposta), uint(idUsuario), aceitar)
+	err = h.uc.Responder(c.Request.Context(), uint(idProposta), uint(idUsuario), aceitar)
 	if err != nil {
 		
 		if errors.Is(err, errors.New("acesso negado: apenas o cliente dono da vaga pode responder a proposta")) || 

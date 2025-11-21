@@ -11,7 +11,7 @@ type Proposta struct {
 	IDVaga        	uint      `json:"id_vaga"`
 	Vaga			Vaga		`gorm:"foreignKey:IDVaga;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"vaga,omitempty"`
 	IDPrestador   	uint      `json:"id_prestador"`
-	Prestador		*Prestador		`gorm:"foreignKey:IDPrestador;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"prestador,omitempty"`
+	Prestador		*Prestador		`gorm:"foreignKey:IDPrestador;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"prestador,omitempty"`
 	ValorProposto 	float64    `json:"valor_proposto"`
 	Mensagem      	string     `json:"mensagem"`
 	PrazoEstimado 	string     `json:"prazo_estimado"`

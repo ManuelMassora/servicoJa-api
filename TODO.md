@@ -1,3 +1,3 @@
-1. Implentacao de Servico - Duracao, Calcular duracao com Preco por Hora.
-2. Colocar UsuarioID como chave primaria em Prestador e Cliente.
-3. Reiniciar banco de dados e corrigir alguns dados e relacionamentos.
+1. Avaliacao deve ser direcionado para prestador do servico.
+2. Marcar todas notificacoes como lidas
+2. Implentacao de Servico - Duracao, Calcular duracao com Preco por Hora.
