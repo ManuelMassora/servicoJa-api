@@ -249,3 +249,52 @@ func getServicoID(c *gin.Context) (uint, error) {
 	}
 	return uint(id), nil
 }
+
+func (h *ServicoHandler) ListarPorLocalizacao(c *gin.Context) {
+	latitude, err := strconv.ParseFloat(c.Query("latitude"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Latitude inválida"})
+		return
+	}
+	longitude, err := strconv.ParseFloat(c.Query("longitude"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Longitude inválida"})
+		return
+	}
+	radius, err := strconv.ParseFloat(c.DefaultQuery("radius", "10"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Raio inválido"})
+		return
+	}
+
+	filters := make(map[string]interface{})
+	for key, vals := range c.Request.URL.Query() {
+		if key == "latitude" || key == "longitude" || key == "radius" || key == "orderBy" || key == "orderDir" || key == "page" || key == "pageSize" {
+			continue
+		}
+		if len(vals) > 0 && vals[0] != "" {
+			filters[key] = vals[0]
+		}
+	}
+
+	orderBy := c.Query("orderBy")
+	orderDir := c.Query("orderDir")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	offset := (page - 1) * pageSize
+
+	servicos, err := h.uc.ListarPorLocalizacao(c.Request.Context(), latitude, longitude, radius, filters, orderBy, orderDir, pageSize, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":      servicos,
+		"page":      page,
+		"pageSize":  pageSize,
+		"orderBy":   orderBy,
+		"direction": orderDir,
+		"filters":   filters,
+	})
+}

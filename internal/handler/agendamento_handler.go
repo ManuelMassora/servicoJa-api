@@ -9,7 +9,7 @@ import (
 )
 
 type AgendamentoHandler struct {
-	uc usecases.AgendamentoUC 
+	uc usecases.AgendamentoUC
 }
 
 func NewAgendamentoHandler(uc usecases.AgendamentoUC) *AgendamentoHandler {
@@ -18,8 +18,7 @@ func NewAgendamentoHandler(uc usecases.AgendamentoUC) *AgendamentoHandler {
 
 func (h *AgendamentoHandler) Criar(c *gin.Context) {
 	var req usecases.AgendamentoRequest
-	
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: " + err.Error()})
 		return
@@ -35,12 +34,12 @@ func (h *AgendamentoHandler) Criar(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao criar agendamento: " + err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, gin.H{"message": "Agendamento criado com sucesso!"})
 }
 
 func (h *AgendamentoHandler) Buscar(c *gin.Context) {
-	
+
 	idParam := c.Param("id")
 	agendamentoID, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
@@ -63,12 +62,12 @@ func (h *AgendamentoHandler) Buscar(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Agendamento não encontrado ou falha na busca: " + err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, resp)
 }
 
 func (h *AgendamentoHandler) Aceitar(c *gin.Context) {
-	
+
 	idParam := c.Param("id")
 	agendamentoID, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
@@ -91,12 +90,12 @@ func (h *AgendamentoHandler) Aceitar(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Agendamento não encontrado ou falha na busca: " + err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, nil)
 }
 
 func (h *AgendamentoHandler) Recusar(c *gin.Context) {
-	
+
 	idParam := c.Param("id")
 	agendamentoID, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
@@ -119,12 +118,12 @@ func (h *AgendamentoHandler) Recusar(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Agendamento não encontrado ou falha na busca: " + err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, nil)
 }
 
 func (h *AgendamentoHandler) Cancelar(c *gin.Context) {
-	
+
 	idParam := c.Param("id")
 	agendamentoID, err := strconv.ParseUint(idParam, 10, 32)
 	if err != nil {
@@ -147,7 +146,7 @@ func (h *AgendamentoHandler) Cancelar(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Agendamento não encontrado ou falha na busca: " + err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, nil)
 }
 
@@ -368,6 +367,55 @@ func (h *AgendamentoHandler) ListarPorCatalogID(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":      agendamentos,
+		"page":      page,
+		"pageSize":  pageSize,
+		"orderBy":   orderBy,
+		"direction": orderDir,
+		"filters":   filters,
+	})
+}
+
+func (h *AgendamentoHandler) ListarPorLocalizacao(c *gin.Context) {
+	latitude, err := strconv.ParseFloat(c.Query("latitude"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Latitude inválida"})
+		return
+	}
+	longitude, err := strconv.ParseFloat(c.Query("longitude"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Longitude inválida"})
+		return
+	}
+	radius, err := strconv.ParseFloat(c.DefaultQuery("radius", "10"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Raio inválido"})
+		return
+	}
+
+	filters := make(map[string]interface{})
+	for key, vals := range c.Request.URL.Query() {
+		if key == "latitude" || key == "longitude" || key == "radius" || key == "orderBy" || key == "orderDir" || key == "page" || key == "pageSize" {
+			continue
+		}
+		if len(vals) > 0 && vals[0] != "" {
+			filters[key] = vals[0]
+		}
+	}
+
+	orderBy := c.Query("orderBy")
+	orderDir := c.Query("orderDir")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	offset := (page - 1) * pageSize
+
+	agendamentos, err := h.uc.ListarPorLocalizacao(c.Request.Context(), latitude, longitude, radius, filters, orderBy, orderDir, pageSize, offset)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

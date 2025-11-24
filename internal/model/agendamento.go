@@ -14,6 +14,9 @@ type Agendamento struct {
 	Cliente		Cliente		`gorm:"foreignKey:IDCliente;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"cliente,omitempty"`
 	DataHora 	time.Time      `json:"datahora"`
 	Status		string         `json:"status"`
+	Localizacao string   `gorm:"column:localizacao;size:255;" json:"localizacao"`
+	Latitude    float64  `gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
+	Longitude   float64  `gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
 }
 
 type AgendamentoRepo interface {
@@ -30,4 +33,5 @@ type AgendamentoRepo interface {
 	) ([]Agendamento, error)
 	ListarPorClienteID(ctx context.Context, clienteID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Agendamento, error)
 	ListarPorCatalogID(ctx context.Context, catalogoID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Agendamento, error)
+	FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Agendamento, error)
 }

@@ -38,14 +38,18 @@ type UsuarioResponse struct {
 }
 
 type PrestadorRequest struct {
-	Usuario UsuarioRequest	`json:"usuario" binding:"required"`
-	Localizacao     string   `json:"localizacao" binding:"required"`
+	Usuario 		UsuarioRequest	`json:"usuario" binding:"required"`
+	Localizacao     string   		`json:"localizacao" binding:"required"`
+	Latitude    	float64  		`json:"latitude" binding:"required"`
+	Longitude   	float64  		`json:"longitude" binding:"required"`
 }
 
 type PrestadorResponse struct {
-	Nome     string `json:"nome"`
-	Telefone string `json:"telefone"`
+	Nome     		string 	`json:"nome"`
+	Telefone 		string 	`json:"telefone"`
 	Localizacao     string  `json:"localizacao"`
+	Latitude    	float64 `json:"latitude"`
+	Longitude   	float64 `json:"longitude"`
 	Disponivel     	bool  	`json:"disponivel"`
 }
 
@@ -78,6 +82,8 @@ func (uc *UsuarioUseCase) CriarPrestador(ctx context.Context, request PrestadorR
 	}
 	prestador, err := model.NewPrestador(
 		request.Localizacao,
+		request.Latitude,
+		request.Longitude,
 		request.Usuario.Nome,
 		request.Usuario.Telefone,
 		request.Usuario.Senha)
@@ -115,6 +121,28 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 			Nome: p.Nome,
 			Telefone: p.Telefone,
 			Localizacao: p.Localizacao,
+			Latitude: p.Latitude,
+			Longitude: p.Longitude,
+			Disponivel: p.StatusDisponivel,
+		})
+	}
+	return response, nil
+}
+
+func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]PrestadorResponse, error) {
+	prestadores, err := uc.prestadorRepo.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	response := make([]PrestadorResponse, 0, len(prestadores))
+	for _, p := range prestadores {
+		response = append(response, PrestadorResponse{
+			Nome: p.Nome,
+			Telefone: p.Telefone,
+			Localizacao: p.Localizacao,
+			Latitude: p.Latitude,
+			Longitude: p.Longitude,
 			Disponivel: p.StatusDisponivel,
 		})
 	}

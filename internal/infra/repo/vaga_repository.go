@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"gorm.io/gorm"
@@ -41,14 +42,14 @@ func (r *VagaRepository) ListarDisponiveis(ctx context.Context, filters map[stri
 		Preload("Cliente").
 		Where("id_prestador IS NULL")
 	for key, value := range filters {
-        switch v := value.(type) {
-        case string:           
-            query = query.Where(key+" LIKE ?", "%"+v+"%")
-        case uint, int:
-            query = query.Where(key+" = ?", v)
-        default:         
-        }
-    }
+		switch v := value.(type) {
+		case string:
+			query = query.Where(key+" LIKE ?", "%"+v+"%")
+		case uint, int:
+			query = query.Where(key+" = ?", v)
+		default:
+		}
+	}
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -68,20 +69,20 @@ func (r *VagaRepository) ListarDisponiveis(ctx context.Context, filters map[stri
 	return vagas, nil
 }
 
-func (r *VagaRepository)	ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Vaga, error) {
+func (r *VagaRepository) ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Vaga, error) {
 	var vagas []model.Vaga
 	query := r.db.WithContext(ctx).
 		Preload("Cliente").
 		Where("id_cliente = ?", idCliente)
 	for key, value := range filters {
-        switch v := value.(type) {
-        case string:           
-            query = query.Where(key+" LIKE ?", "%"+v+"%")
-        case uint, int:
-            query = query.Where(key+" = ?", v)
-        default:         
-        }
-    }
+		switch v := value.(type) {
+		case string:
+			query = query.Where(key+" LIKE ?", "%"+v+"%")
+		case uint, int:
+			query = query.Where(key+" = ?", v)
+		default:
+		}
+	}
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -124,4 +125,42 @@ func (r *VagaRepository) AtualizarStatus(ctx context.Context, idVaga uint, statu
 		Model(&model.Vaga{}).
 		Where("id = ?", idVaga).
 		Update("status", status).Error
+}
+
+func (r *VagaRepository) FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Vaga, error) {
+	var vagas []model.Vaga
+
+	haversine := fmt.Sprintf(
+		"6371 * acos(cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)))",
+		latitude, longitude, latitude,
+	)
+
+	query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
+		Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+
+	for key, value := range filters {
+		query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))
+	}
+
+	if orderBy != "" {
+		if orderDir == "" {
+			orderDir = "asc"
+		}
+		query = query.Order(fmt.Sprintf("%s %s", orderBy, orderDir))
+	} else {
+		query = query.Order("distance asc")
+	}
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	if err := query.Find(&vagas).Error; err != nil {
+		return nil, err
+	}
+
+	return vagas, nil
 }

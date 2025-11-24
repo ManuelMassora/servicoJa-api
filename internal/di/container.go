@@ -21,6 +21,8 @@ type Container struct {
 	VagaRepo *repo.VagaRepository
 	PropostaRepo *repo.PropostaRepository
 	NotificacaoRepo *repo.NotificacaoRepo
+	AvaliacaoRepo *repo.AvaliacaoRepo
+
 
 	//Services
 	AuthService *services.AuthUSer
@@ -35,6 +37,7 @@ type Container struct {
 	PropostaUC *usecases.PropostaUseCase
 	VagaUC *usecases.VagaUseCase
 	NotificacaoUC *usecases.NotificacaoUseCase
+	AvaliacaoUC *usecases.AvaliacaoUseCase
 		
 	//Handler
 	CategoriaH	*handler.CategoriaHandler
@@ -46,6 +49,7 @@ type Container struct {
 	PropostaH *handler.PropostaHandler
 	VagaH *handler.VagaHandler
 	NotificacaoH *handler.NotificacaoHandler
+	AvaliacaoH *handler.AvaliacaoHandler
 }
 
 func NewContainer(db *gorm.DB) *Container {
@@ -62,6 +66,8 @@ func NewContainer(db *gorm.DB) *Container {
 	c.VagaRepo = repo.NewVagaRepository(db).(*repo.VagaRepository)
 	c.PropostaRepo = repo.NewPropostaRepository(db).(*repo.PropostaRepository)
 	c.NotificacaoRepo = repo.NewNotificacaoRepo(db).(*repo.NotificacaoRepo)
+	c.AvaliacaoRepo = repo.NewAvaliacaoRepository(db).(*repo.AvaliacaoRepo)
+
 
 	//Init Services
 	c.JwtService = middleware.NewJWTService()
@@ -75,6 +81,7 @@ func NewContainer(db *gorm.DB) *Container {
 	c.PropostaUC = usecases.NewPropostaUseCase(c.PropostaRepo, c.VagaRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
 	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo)
 	c.NotificacaoUC = usecases.NewNotificacaoUseCase(c.NotificacaoRepo, c.UsuarioRepo)
+	c.AvaliacaoUC = usecases.NewAvaliacaoUseCase(c.AvaliacaoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
 
 	//Init Handler
 	c.CategoriaH = handler.NewCategoriaHandler(*c.CategoriaUC)
@@ -86,5 +93,6 @@ func NewContainer(db *gorm.DB) *Container {
 	c.PropostaH = handler.NewPropostaHandler(*c.PropostaUC)
 	c.VagaH = handler.NewVagaHandler(*c.VagaUC)
 	c.NotificacaoH = handler.NewNotificacaoHandler(*c.NotificacaoUC)
+	c.AvaliacaoH = handler.NewAvaliacaoHandler(*c.AvaliacaoUC)
 	return c
 }

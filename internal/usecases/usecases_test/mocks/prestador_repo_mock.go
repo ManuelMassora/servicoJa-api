@@ -41,3 +41,8 @@ func (m *MockPrestadorRepo) Listar(ctx context.Context, filters map[string]inter
 	args := m.Called(ctx, filters, statusDisponivel, orderBy, orderDir, limit, offset)
 	return args.Get(0).([]model.Prestador), args.Error(1)
 }
+
+func (m *MockPrestadorRepo) FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
+	args := m.Called(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+	return args.Get(0).([]model.Prestador), args.Error(1)
+}

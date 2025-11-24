@@ -35,6 +35,9 @@ type AgendamentoRequest struct {
 	Detalhe 	string 		`json:"detalhe" binding:"required"`
 	IDCatalogo  uint  		`json:"id_catalogo" binding:"required"`
 	DataHora 	time.Time   `json:"datahora" binding:"required"`
+	Localizacao string   	`json:"localizacao" binding:"required"`
+	Latitude    float64  	`json:"latitude" binding:"required"`
+	Longitude   float64  	`json:"longitude" binding:"required"`
 }
 
 type AgendamentoResponse struct {
@@ -45,6 +48,9 @@ type AgendamentoResponse struct {
 	Prestador	string		`json:"prestador"`
 	DataHora 	time.Time   `json:"datahora"`
 	Status 		string   	`json:"status"`
+	Localizacao string   	`json:"localizacao"`
+	Latitude    float64  	`json:"latitude"`
+	Longitude   float64  	`json:"longitude"`
 }
 
 func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) error {
@@ -75,6 +81,9 @@ func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCl
 		IDCliente: idCliente,
 		DataHora: req.DataHora,
 		Status: "PENDENTE",
+		Localizacao: req.Localizacao,
+		Latitude: req.Latitude,
+		Longitude: req.Longitude,
 	})
 }
 
@@ -99,6 +108,9 @@ func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*
 		Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
 		DataHora: agendamento.DataHora,
 		Status: agendamento.Status,
+		Localizacao: agendamento.Localizacao,
+		Latitude: agendamento.Latitude,
+		Longitude: agendamento.Longitude,
 	}, nil
 }
 
@@ -128,7 +140,9 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 	}
 	servico := &model.Servico{
 		IDAgendamento: &id,
-		Localizacao: agendamento.Catalogo.Localizacao,
+		Localizacao: agendamento.Localizacao,
+		Latitude: agendamento.Latitude,
+		Longitude: agendamento.Longitude,
 		Preco: agendamento.Catalogo.PrecoBase,
 		Status: model.StatusEmAndamento,
 		IDCliente: agendamento.IDCliente,
@@ -196,6 +210,9 @@ func (uc *AgendamentoUC) Listar(ctx context.Context, filters map[string]interfac
 			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
+			Localizacao: agendamento.Localizacao,
+			Latitude: agendamento.Latitude,
+			Longitude: agendamento.Longitude,
 		})
 	}
 	return resp, nil
@@ -216,6 +233,9 @@ func (uc *AgendamentoUC) ListarPorClienteID(ctx context.Context, idUsuario uint,
 			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
+			Localizacao: agendamento.Localizacao,
+			Latitude: agendamento.Latitude,
+			Longitude: agendamento.Longitude,
 		})
 	}
 	return resp, nil
@@ -243,6 +263,32 @@ func (uc *AgendamentoUC) ListarPorCatalogID(ctx context.Context, idUsuario, idCa
 			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
+			Localizacao: agendamento.Localizacao,
+			Latitude: agendamento.Latitude,
+			Longitude: agendamento.Longitude,
+		})
+	}
+	return resp, nil
+}
+
+func (uc *AgendamentoUC) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoResponse, error) {
+	agendamentos, err := uc.r.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	var resp []AgendamentoResponse
+	for _, agendamento := range agendamentos {
+		resp = append(resp, AgendamentoResponse{
+			ID: agendamento.ID,
+			Detalhe: agendamento.Detalhe,
+			Catalogo: agendamento.Catalogo.Nome,
+			Cliente:  agendamento.Cliente.Usuario.Nome,
+			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
+			DataHora: agendamento.DataHora,
+			Status:   agendamento.Status,
+			Localizacao: agendamento.Localizacao,
+			Latitude: agendamento.Latitude,
+			Longitude: agendamento.Longitude,
 		})
 	}
 	return resp, nil

@@ -8,6 +8,8 @@ import (
 type Servico struct {
 	BaseModel
 	Localizacao string   `gorm:"column:localizacao;size:255;not null" json:"localizacao"`
+	Latitude    float64  `gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
+	Longitude   float64  `gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
 	Preco       float64  `gorm:"column:preco;type:decimal(10,2);not null" json:"preco"`
 	Status      Status   `gorm:"column:status;type:varchar(20);not null" json:"status"`
 	IDAgendamento   *uint    `gorm:"column:id_agendamento;type:bigint;" json:"id_agendamento,omitempty"`
@@ -31,4 +33,5 @@ type ServicoRepo interface {
 	AtualizarStatus(ctx context.Context, id uint, status string) error
 	ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Servico, error)
 	ListarPorPrestador(ctx context.Context, IDPrestador uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Servico, error)
+	FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Servico, error)
 }

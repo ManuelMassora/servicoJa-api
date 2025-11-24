@@ -51,6 +51,8 @@ type Prestador struct {
 	Nome     			string 		`json:"nome"`
 	Telefone 			string 		`json:"telefone"`
 	Localizacao     	string   	`json:"localizacao"`
+	Latitude    		float64  	`gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
+	Longitude   		float64  	`gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
 	StatusDisponivel 	bool    	`json:"status_disponivel"`
 	Reputacao       	float64  	`json:"reputacao"`
 }
@@ -60,6 +62,7 @@ type PrestadorRepo interface {
 	AtualizarStatus(ctx context.Context, id uint, disponivel bool) error
 	BuscarPorID(ctx context.Context, id uint) (*Prestador, error)
 	Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)
+	FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)
 }
 
 var params = &argon2id.Params{
@@ -148,7 +151,7 @@ func NewCliente(nome, telefone, senha string) (*Cliente,error) {
 	return cliente, nil
 }
 
-func NewPrestador(localizacao string, nome string, telefone, senha string) (*Prestador,error) {
+func NewPrestador(localizacao string, latitude, longitude float64, nome string, telefone, senha string) (*Prestador,error) {
 	if nome == "" {
         return nil, errors.New("nome não pode ser vazio")
     }
@@ -177,6 +180,8 @@ func NewPrestador(localizacao string, nome string, telefone, senha string) (*Pre
 		Nome: nome,
 		Telefone: telefone,
 		Localizacao: localizacao,
+		Latitude: latitude,
+		Longitude: longitude,
 		StatusDisponivel: true,
 	}
 	return prestador, nil

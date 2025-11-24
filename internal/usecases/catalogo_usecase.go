@@ -23,6 +23,8 @@ type RequestCreateCatalogo struct {
 	PrecoBase   	float64  `json:"precobase" binding:"required"`
 	IdCategoria  	uint   	`json:"categoriaid" binding:"required"`
 	Localizacao 	string   `json:"localizacao" binding:"required"`
+	Latitude    	float64  `json:"latitude" binding:"required"`
+	Longitude   	float64  `json:"longitude" binding:"required"`
 }
 type ResponseCatalogo struct {
 	ID		  	uint    `json:"id"`
@@ -33,6 +35,8 @@ type ResponseCatalogo struct {
 	Disponivel  bool    `json:"disponivel"`
 	Prestador   string 	`json:"prestador"`
 	Localizacao string   `json:"localizacao"`
+	Latitude    float64  `json:"latitude"`
+	Longitude   float64  `json:"longitude"`
 }
 
 func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
@@ -43,6 +47,8 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 		IDCategoria: request.IdCategoria,
 		IDPrestador: idPrestador,
 		Localizacao: request.Localizacao,
+		Latitude: request.Latitude,
+		Longitude: request.Longitude,
 	}
 	return uc.r.Create(ctx,catalogo)
 }
@@ -85,6 +91,8 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 			Disponivel: catalogo.Disponivel,
 			Prestador: catalogo.Prestador.Usuario.Nome,
 			Localizacao: catalogo.Localizacao,
+			Latitude: catalogo.Latitude,
+			Longitude: catalogo.Longitude,
 		})
 	}
 	return catalogoResponse, nil
@@ -106,6 +114,31 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uin
 			Disponivel: catalogo.Disponivel,
 			Prestador: catalogo.Prestador.Usuario.Nome,
 			Localizacao: catalogo.Localizacao,
+			Latitude: catalogo.Latitude,
+			Longitude: catalogo.Longitude,
+		})
+	}
+	return catalogoResponse, nil
+}
+
+func(uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
+	catalogos, err := uc.r.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
+	for _, catalogo := range catalogos {
+		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
+			ID: catalogo.ID,
+			Nome: catalogo.Nome,
+			Descricao: catalogo.Descricao,
+			PrecoBase: catalogo.PrecoBase,
+			Categoria: catalogo.Categoria.Nome,
+			Disponivel: catalogo.Disponivel,
+			Prestador: catalogo.Prestador.Usuario.Nome,
+			Localizacao: catalogo.Localizacao,
+			Latitude: catalogo.Latitude,
+			Longitude: catalogo.Longitude,
 		})
 	}
 	return catalogoResponse, nil

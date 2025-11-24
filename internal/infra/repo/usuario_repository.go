@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"gorm.io/gorm"
@@ -46,7 +47,7 @@ func (r *UsuarioRepository) ZerarNotificacoesNovas(ctx context.Context, id uint)
 	if err != nil {
 		return err
 	}
-	usuario.NotificacoesNovas=0
+	usuario.NotificacoesNovas = 0
 	return r.db.WithContext(ctx).Save(&usuario).Error
 }
 
@@ -74,12 +75,10 @@ func (r *UsuarioRepository) ListarTodos(ctx context.Context, filters map[string]
 	var usuarios []model.Usuario
 	query := r.db.WithContext(ctx).Preload("RolePermissao")
 
-	
 	for field, value := range filters {
 		query = query.Where(field+" LIKE ?", "%"+value.(string)+"%")
 	}
 
-	
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -87,7 +86,6 @@ func (r *UsuarioRepository) ListarTodos(ctx context.Context, filters map[string]
 		query = query.Order(orderBy + " " + orderDir)
 	}
 
-	
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -130,12 +128,10 @@ func (r *ClienteRepository) Listar(ctx context.Context, filters map[string]inter
 	var clientes []model.Cliente
 	query := r.db.WithContext(ctx).Preload("Usuario")
 
-	
 	for field, value := range filters {
 		query = query.Where(field+" = ?", value)
 	}
 
-	
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"
@@ -143,7 +139,6 @@ func (r *ClienteRepository) Listar(ctx context.Context, filters map[string]inter
 		query = query.Order(orderBy + " " + orderDir)
 	}
 
-	
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -192,7 +187,7 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id uint) (*model.
 func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
 	var prestadores []model.Prestador
 	query := r.db.WithContext(ctx).Preload("Usuario")
-	for field, value := range filters {		
+	for field, value := range filters {
 		if strVal, ok := value.(string); ok {
 			query = query.Where(field+" LIKE ?", "%"+strVal+"%")
 		}
@@ -218,5 +213,43 @@ func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]int
 	if err != nil {
 		return nil, err
 	}
+	return prestadores, nil
+}
+
+func (r *PrestadorRepository) FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
+	var prestadores []model.Prestador
+
+	haversine := fmt.Sprintf(
+		"6371 * acos(cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)))",
+		latitude, longitude, latitude,
+	)
+
+	query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
+		Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+
+	for key, value := range filters {
+		query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))
+	}
+
+	if orderBy != "" {
+		if orderDir == "" {
+			orderDir = "asc"
+		}
+		query = query.Order(fmt.Sprintf("%s %s", orderBy, orderDir))
+	} else {
+		query = query.Order("distance asc")
+	}
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	if err := query.Find(&prestadores).Error; err != nil {
+		return nil, err
+	}
+
 	return prestadores, nil
 }

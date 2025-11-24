@@ -19,6 +19,8 @@ type ServicoUseCase struct {
 type ServicoResponse struct {
 	ID		  		uint      	`json:"id"`
 	Localizacao 	string   	`json:"localizacao"`
+	Latitude    	float64  	`json:"latitude"`
+	Longitude   	float64  	`json:"longitude"`
 	Preco       	float64  	`json:"preco"`
 	Status      	string   	`json:"status"`
 	IDAgendamento   *uint    	`json:"id_agendamento,omitempty"`
@@ -112,6 +114,8 @@ func (uc *ServicoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, 
 		resp = append(resp, ServicoResponse{
 			ID:            s.ID,
 			Localizacao:   s.Localizacao,
+			Latitude:      s.Latitude,
+			Longitude:     s.Longitude,
 			Preco:         s.Preco,
 			Status:        string(s.Status),
 			IDAgendamento: s.IDAgendamento,
@@ -138,6 +142,36 @@ func (uc *ServicoUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint
 		resp = append(resp, ServicoResponse{
 			ID:            s.ID,
 			Localizacao:   s.Localizacao,
+			Latitude:      s.Latitude,
+			Longitude:     s.Longitude,
+			Preco:         s.Preco,
+			Status:        string(s.Status),
+			IDAgendamento: s.IDAgendamento,
+			IDVaga:        s.IDVaga,
+			DataHoraInicio: s.DataHoraInicio,
+			DataHoraFim:    s.DataHoraFim,
+			Cliente:        s.IDCliente,
+			Prestador:      s.IDPrestador,
+		})
+	}
+	return resp, nil
+}
+
+func (uc *ServicoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]ServicoResponse, error) {
+	servicos, err := uc.r.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	if len(servicos) == 0 {
+		return []ServicoResponse{}, nil
+	}
+	var resp []ServicoResponse
+	for _, s := range servicos {
+		resp = append(resp, ServicoResponse{
+			ID:            s.ID,
+			Localizacao:   s.Localizacao,
+			Latitude:      s.Latitude,
+			Longitude:     s.Longitude,
 			Preco:         s.Preco,
 			Status:        string(s.Status),
 			IDAgendamento: s.IDAgendamento,
