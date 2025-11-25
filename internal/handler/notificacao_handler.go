@@ -79,3 +79,18 @@ func (h *NotificacaoHandler) MarcarComoLida(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Notificação marcada como lida com sucesso"})
 }
+
+func (h *NotificacaoHandler) MarcarTodasComoLidas(c *gin.Context) {
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuário não autenticado"})
+		return
+	}
+
+	err = h.uc.MarcarTodasComoLidas(c.Request.Context(), uint(idUsuario))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Todas as notificações marcadas como lidas com sucesso"})
+}

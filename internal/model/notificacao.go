@@ -16,4 +16,5 @@ type NotificacaoRepo interface {
 	BuscarPorID(ctx context.Context, id uint) (*Notificacao,error)
 	ListarPorUsuario(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Notificacao, error)
 	MarcarComoLida(ctx context.Context, id uint) error
+	MarcarTodasComoLidas(ctx context.Context, idUsuario uint) error
 }

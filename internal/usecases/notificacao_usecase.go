@@ -70,3 +70,12 @@ func(uc *NotificacaoUseCase) MarcarComoLida(ctx context.Context, id, idUsuario u
 	}
 	return uc.NotificacaoRepo.MarcarComoLida(ctx, id)
 }
+
+func(uc *NotificacaoUseCase) MarcarTodasComoLidas(ctx context.Context, idUsuario uint) error {
+	err := uc.NotificacaoRepo.MarcarTodasComoLidas(ctx, idUsuario)
+	if err != nil {
+		return err
+	}
+	// After marking all as read, set the new notifications count to zero
+	return uc.UsuarioRepo.ZerarNotificacoesNovas(ctx, idUsuario)
+}

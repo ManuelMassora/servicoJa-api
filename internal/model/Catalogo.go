@@ -6,7 +6,9 @@ type Catalogo struct {
 	BaseModel
 	Nome        string   `gorm:"column:nome;size:100;not null" json:"nome"`
 	Descricao   string   `gorm:"column:descricao;size:2000;not null" json:"descricao"`
-	PrecoBase   float64  `gorm:"column:preco_base;type:decimal(10,2);not null" json:"preco_base"`
+	TipoPreco    string   `gorm:"column:tipo_preco;type:varchar(20);not null;default:'fixo'" json:"tipo_preco"`
+	ValorFixo   float64  `gorm:"column:valor_fixo;type:decimal(10,2);default:0.00" json:"valor_fixo"`
+	ValorPorHora float64  `gorm:"column:valor_por_hora;type:decimal(10,2);default:0.00" json:"valor_por_hora"`
 	IDCategoria  uint   `gorm:"column:id_categoria;size:100;not null" json:"categoria_id"`
 	Categoria   Categoria   `gorm:"foreignKey:IDCategoria;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"categoria,omitempty"`
 	Disponivel  bool     `gorm:"column:disponivel;default:true" json:"disponivel"`

@@ -39,13 +39,6 @@ func (h *AvaliacaoHandler) CriarAvaliacao(c *gin.Context) {
 }
 
 func (h *AvaliacaoHandler) ListarAvaliacoesPorCliente(c *gin.Context) {
-	idClienteStr := c.Param("id")
-	idCliente, err := strconv.ParseUint(idClienteStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID do cliente inválido"})
-		return
-	}
-
 	idUsuario, err := getUsuarioID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -57,7 +50,7 @@ func (h *AvaliacaoHandler) ListarAvaliacoesPorCliente(c *gin.Context) {
 	orderBy := c.Query("orderBy")
 	orderDir := c.Query("orderDir")
 
-	avaliacoes, err := h.uc.ListarPorCliente(c.Request.Context(), uint(idCliente), idUsuario, filters, orderBy, orderDir, limit, offset)
+	avaliacoes, err := h.uc.ListarPorCliente(c.Request.Context(), idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

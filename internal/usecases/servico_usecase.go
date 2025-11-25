@@ -66,6 +66,15 @@ func (uc *ServicoUseCase) FinalizarServico(ctx context.Context, idServico, idUsu
 	}
 	servico.Status = model.StatusConcluido
 	servico.DataHoraFim = time.Now()
+
+	// Calculate final price for hourly services
+	if servico.Agendamento.Catalogo.TipoPreco == "por_hora" {
+		if servico.DataHoraInicio.IsZero() {
+			return errors.New("data de início do serviço não definida para cálculo por hora")
+		}
+		duration := servico.DataHoraFim.Sub(servico.DataHoraInicio)
+		servico.Preco = CalculateFinalServicePrice(&servico.Agendamento.Catalogo, duration)
+	}
 	return uc.r.Atualizar(ctx, servico)
 }
 

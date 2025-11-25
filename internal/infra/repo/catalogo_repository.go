@@ -43,7 +43,6 @@ func (r *CatalogoRepository) FindByID(ctx context.Context,id uint) (*model.Catal
 func (r *CatalogoRepository) FindAll(ctx context.Context,filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*model.Catalogo, error) {
 	var catalogos []*model.Catalogo
 	query := r.db.Preload("Prestador").
-	Preload("Prestador.Usuario").
 	Preload("Categoria").
 	Model(&model.Catalogo{})
 
@@ -108,7 +107,9 @@ func (r *CatalogoRepository) FindByLocation(ctx context.Context, latitude, longi
     )
 
     query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
-        Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+        Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+		Preload("Prestador").
+		Preload("Categoria")
 
     for key, value := range filters {
         query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))

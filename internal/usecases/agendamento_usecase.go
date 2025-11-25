@@ -104,8 +104,8 @@ func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*
 		ID: agendamento.ID,
 		Detalhe: agendamento.Detalhe,
 		Catalogo: agendamento.Catalogo.Nome,
-		Cliente: agendamento.Cliente.Usuario.Nome,
-		Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
+		Cliente: agendamento.Cliente.Nome,
+		Prestador: agendamento.Catalogo.Prestador.Nome,
 		DataHora: agendamento.DataHora,
 		Status: agendamento.Status,
 		Localizacao: agendamento.Localizacao,
@@ -143,12 +143,21 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 		Localizacao: agendamento.Localizacao,
 		Latitude: agendamento.Latitude,
 		Longitude: agendamento.Longitude,
-		Preco: agendamento.Catalogo.PrecoBase,
 		Status: model.StatusEmAndamento,
 		IDCliente: agendamento.IDCliente,
 		IDPrestador: agendamento.Catalogo.IDPrestador,
 		DataHoraInicio: time.Now(),
 	}
+
+	switch agendamento.Catalogo.TipoPreco {
+		case "fixo":
+			servico.Preco = agendamento.Catalogo.ValorFixo
+		case "por_hora":
+			servico.Preco = 0.0 // Initial price for hourly services, will be calculated at finalization
+		default:
+			return errors.New("tipo de preço de catálogo inválido")
+	}
+
 	err = uc.servico.Criar(ctx, servico)
 	if err != nil {
 		return err
@@ -206,8 +215,8 @@ func (uc *AgendamentoUC) Listar(ctx context.Context, filters map[string]interfac
 			ID: agendamento.ID,
 			Detalhe: agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
-			Cliente:  agendamento.Cliente.Usuario.Nome,
-			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
+			Cliente:  agendamento.Cliente.Nome,
+			Prestador: agendamento.Catalogo.Prestador.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
 			Localizacao: agendamento.Localizacao,
@@ -229,8 +238,8 @@ func (uc *AgendamentoUC) ListarPorClienteID(ctx context.Context, idUsuario uint,
 			ID: agendamento.ID,
 			Detalhe: agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
-			Cliente:  agendamento.Cliente.Usuario.Nome,
-			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
+			Cliente:  agendamento.Cliente.Nome,
+			Prestador: agendamento.Catalogo.Prestador.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
 			Localizacao: agendamento.Localizacao,
@@ -259,8 +268,8 @@ func (uc *AgendamentoUC) ListarPorCatalogID(ctx context.Context, idUsuario, idCa
 			ID: agendamento.ID,
 			Detalhe: agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
-			Cliente:  agendamento.Cliente.Usuario.Nome,
-			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
+			Cliente:  agendamento.Cliente.Nome,
+			Prestador: agendamento.Catalogo.Prestador.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
 			Localizacao: agendamento.Localizacao,
@@ -282,8 +291,8 @@ func (uc *AgendamentoUC) ListarPorLocalizacao(ctx context.Context, latitude, lon
 			ID: agendamento.ID,
 			Detalhe: agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
-			Cliente:  agendamento.Cliente.Usuario.Nome,
-			Prestador: agendamento.Catalogo.Prestador.Usuario.Nome,
+			Cliente:  agendamento.Cliente.Nome,
+			Prestador: agendamento.Catalogo.Prestador.Nome,
 			DataHora: agendamento.DataHora,
 			Status:   agendamento.Status,
 			Localizacao: agendamento.Localizacao,

@@ -131,13 +131,9 @@ func mapAvaliacoesToResponse(avaliacoes []model.Avaliacao) []AvaliacaoResponse {
 	return respostas
 }
 
-func (uc *AvaliacaoUseCase) ListarPorCliente(ctx context.Context, idCliente, idUsuario uint, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]AvaliacaoResponse, error) {
-	// Validação: Apenas o próprio cliente pode listar suas avaliações
-	if idCliente != idUsuario {
-		return nil, errors.New("acesso negado: você só pode listar suas próprias avaliações")
-	}
+func (uc *AvaliacaoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]AvaliacaoResponse, error) {
 
-	avaliacoes, err := uc.avaliacaoRepo.ListarPorCliente(ctx, idCliente, filters, orderBy, orderDir, limit, offset)
+	avaliacoes, err := uc.avaliacaoRepo.ListarPorCliente(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}

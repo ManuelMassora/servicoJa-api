@@ -20,8 +20,10 @@ func NewCatalogoUC(
 type RequestCreateCatalogo struct {
 	Nome        	string   `json:"nome" binding:"required"`
 	Descricao   	string   `json:"descricao" binding:"required"`
-	PrecoBase   	float64  `json:"precobase" binding:"required"`
-	IdCategoria  	uint   	`json:"categoriaid" binding:"required"`
+	TipoPreco		string 	 `json:"tipo_preco" binding:"required,oneof=fixo por_hora"`
+	ValorFixo   	float64  `json:"valor_fixo"`
+	ValorPorHora	float64  `json:"valor_por_hora"`
+	IdCategoria  	uint   	`json:"categoria_id" binding:"required"`
 	Localizacao 	string   `json:"localizacao" binding:"required"`
 	Latitude    	float64  `json:"latitude" binding:"required"`
 	Longitude   	float64  `json:"longitude" binding:"required"`
@@ -30,7 +32,9 @@ type ResponseCatalogo struct {
 	ID		  	uint    `json:"id"`
 	Nome        string  `json:"nome"`
 	Descricao   string  `json:"descricao"`
-	PrecoBase   float64 `json:"preco_base"`
+	TipoPreco	string  `json:"tipo_preco"`
+	ValorFixo   float64 `json:"valor_fixo"`
+	ValorPorHora float64 `json:"valor_por_hora"`
 	Categoria   string  `json:"categoria"`
 	Disponivel  bool    `json:"disponivel"`
 	Prestador   string 	`json:"prestador"`
@@ -43,13 +47,29 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 	catalogo := &model.Catalogo{
 		Nome: request.Nome,
 		Descricao: request.Descricao,
-		PrecoBase: request.PrecoBase,
+		TipoPreco: request.TipoPreco,
+		ValorFixo: request.ValorFixo,
+		ValorPorHora: request.ValorPorHora,
 		IDCategoria: request.IdCategoria,
 		IDPrestador: idPrestador,
 		Localizacao: request.Localizacao,
 		Latitude: request.Latitude,
 		Longitude: request.Longitude,
 	}
+	// Validation for pricing based on TipoPreco
+	if catalogo.TipoPreco == "fixo" && catalogo.ValorFixo <= 0 {
+		return errors.New("para preco fixo, o valor fixo deve ser maior que zero")
+	}
+	if catalogo.TipoPreco == "por_hora" && catalogo.ValorPorHora <= 0 {
+		return errors.New("para preco por hora, o valor por hora deve ser maior que zero")
+	}
+	if catalogo.TipoPreco == "por_hora" && catalogo.ValorFixo > 0 {
+		return errors.New("preco por hora nao pode ter valor fixo")
+	}
+	if catalogo.TipoPreco == "fixo" && catalogo.ValorPorHora > 0 {
+		return errors.New("preco fixo nao pode ter valor por hora")
+	}
+
 	return uc.r.Create(ctx,catalogo)
 }
 
@@ -86,10 +106,12 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 			ID: catalogo.ID,
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
-			PrecoBase: catalogo.PrecoBase,
+			TipoPreco: catalogo.TipoPreco,
+			ValorFixo: catalogo.ValorFixo,
+			ValorPorHora: catalogo.ValorPorHora,
 			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Usuario.Nome,
+			Prestador: catalogo.Prestador.Nome,
 			Localizacao: catalogo.Localizacao,
 			Latitude: catalogo.Latitude,
 			Longitude: catalogo.Longitude,
@@ -109,10 +131,12 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uin
 			ID: catalogo.ID,
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
-			PrecoBase: catalogo.PrecoBase,
+			TipoPreco: catalogo.TipoPreco,
+			ValorFixo: catalogo.ValorFixo,
+			ValorPorHora: catalogo.ValorPorHora,
 			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Usuario.Nome,
+			Prestador: catalogo.Prestador.Nome,
 			Localizacao: catalogo.Localizacao,
 			Latitude: catalogo.Latitude,
 			Longitude: catalogo.Longitude,
@@ -132,10 +156,12 @@ func(uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, lo
 			ID: catalogo.ID,
 			Nome: catalogo.Nome,
 			Descricao: catalogo.Descricao,
-			PrecoBase: catalogo.PrecoBase,
+			TipoPreco: catalogo.TipoPreco,
+			ValorFixo: catalogo.ValorFixo,
+			ValorPorHora: catalogo.ValorPorHora,
 			Categoria: catalogo.Categoria.Nome,
 			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Usuario.Nome,
+			Prestador: catalogo.Prestador.Nome,
 			Localizacao: catalogo.Localizacao,
 			Latitude: catalogo.Latitude,
 			Longitude: catalogo.Longitude,

@@ -136,7 +136,8 @@ func (r *VagaRepository) FindByLocation(ctx context.Context, latitude, longitude
 	)
 
 	query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
-		Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+		Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+		Preload("Cliente")
 
 	for key, value := range filters {
 		query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))

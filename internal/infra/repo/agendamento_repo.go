@@ -52,9 +52,8 @@ func (r *AgendamentoRepo) Listar(
 	query := r.db.WithContext(ctx).Model(&model.Agendamento{})
 	query = query.
 		Preload("Cliente").
-		Preload("Cliente.Usuario").
 		Preload("Catalogo").
-		Preload("Catalogo.Prestador.Usuario")
+		Preload("Catalogo.Prestador")
 	for key, value := range filters {
 		switch v := value.(type) {
 		case string:
@@ -87,9 +86,8 @@ func (r *AgendamentoRepo) Listar(
 func (r *AgendamentoRepo) ListarPorClienteID(ctx context.Context, clienteID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Agendamento, error) {
 	var agendamentos []model.Agendamento
 	query := r.db.Preload("Cliente").
-		Preload("Cliente.Usuario").
 		Preload("Catalogo").
-		Preload("Catalogo.Prestador.Usuario").
+		Preload("Catalogo.Prestador").
 		Model(&model.Agendamento{}).
 		Where("id_cliente = ?", clienteID)
 
@@ -119,9 +117,8 @@ func (r *AgendamentoRepo) ListarPorClienteID(ctx context.Context, clienteID uint
 func (r *AgendamentoRepo) ListarPorCatalogID(ctx context.Context, catalogoID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Agendamento, error) {
 	var agendamentos []model.Agendamento
 	query := r.db.Preload("Cliente").
-		Preload("Cliente.Usuario").
 		Preload("Catalogo").
-		Preload("Catalogo.Prestador.Usuario").
+		Preload("Catalogo.Prestador").
 		Model(&model.Agendamento{}).
 		Where("id_catalogo = ?", catalogoID)
 
@@ -157,7 +154,10 @@ func (r *AgendamentoRepo) FindByLocation(ctx context.Context, latitude, longitud
 	)
 
 	query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
-		Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+		Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+		Preload("Cliente").
+		Preload("Catalogo").
+		Preload("Catalogo.Prestador")
 
 	for key, value := range filters {
 		query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))

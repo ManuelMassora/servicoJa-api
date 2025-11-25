@@ -30,7 +30,6 @@ func (r *ServicoRepository) BuscarPorID(ctx context.Context, id uint) (*model.Se
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
-		Preload("Agendamento.Catalogo").
 		Preload("Vaga").
 		First(&servico, id).Error
 	if err != nil {
@@ -52,7 +51,6 @@ func (r *ServicoRepository) ListarPorCliente(ctx context.Context, idCliente uint
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
-		Preload("Agendamento.Catalogo").
 		Preload("Vaga").
 		Where("id_cliente = ?", idCliente)
 
@@ -96,7 +94,6 @@ func (r *ServicoRepository) ListarPorPrestador(ctx context.Context, IDPrestador 
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
-		Preload("Agendamento.Catalogo").
 		Preload("Vaga").
 		Where("id_prestador =?", IDPrestador)
 
@@ -143,7 +140,11 @@ func (r *ServicoRepository) FindByLocation(ctx context.Context, latitude, longit
     )
 
     query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
-        Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+        Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+		Preload("Cliente").
+		Preload("Prestador").
+		Preload("Agendamento").
+		Preload("Vaga")
 
     for key, value := range filters {
         query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))

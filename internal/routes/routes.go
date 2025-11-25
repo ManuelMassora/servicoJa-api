@@ -84,11 +84,12 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 	{
 		notificacao.GET("", container.NotificacaoH.ListarPorUsuario)
 		notificacao.POST("/lida/:id", container.NotificacaoH.MarcarComoLida)
+		notificacao.PUT("/lidas", container.NotificacaoH.MarcarTodasComoLidas)
 	}
 	avaliacao := server.Group("avaliacao", middleware.Auth())
 	{
-		avaliacao.POST("/cliente/:id", middleware.HasRole("CLIENTE"), container.AvaliacaoH.CriarAvaliacao)
+		avaliacao.POST("/cliente", middleware.HasRole("CLIENTE"), container.AvaliacaoH.CriarAvaliacao)
 		avaliacao.GET("/cliente", middleware.HasRole("CLIENTE"), container.AvaliacaoH.ListarAvaliacoesPorCliente)
-		avaliacao.GET("", container.AvaliacaoH.ListarAvaliacoesPorPrestador)
+		avaliacao.GET("prestador/:id", container.AvaliacaoH.ListarAvaliacoesPorPrestador)
 	}
 }

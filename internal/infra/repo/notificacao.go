@@ -66,3 +66,7 @@ func (r *NotificacaoRepo) ListarPorUsuario(
 func(r *NotificacaoRepo)MarcarComoLida(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Model(&model.Notificacao{}).Where("id = ?", id).Update("lida", true).Error
 }
+
+func(r *NotificacaoRepo)MarcarTodasComoLidas(ctx context.Context, idUsuario uint) error {
+	return r.db.WithContext(ctx).Model(&model.Notificacao{}).Where("id_usuario = ?", idUsuario).Update("lida", true).Error
+}

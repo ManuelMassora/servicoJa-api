@@ -37,7 +37,6 @@ type PropostaRequest struct {
 	ValorProposto 	float64    	`json:"valor_proposto" binding:"required"`
 	Mensagem      	string     	`json:"mensagem" binding:"required"`
 	PrazoEstimado 	string     	`json:"prazo_estimado" binding:"required"`
-	Status        	string     	`json:"status" binding:"required"`
 }
 
 type PropostaResponse struct {
@@ -78,10 +77,13 @@ func (uc *PropostaUseCase) Criar(ctx context.Context, request PropostaRequest, i
 		PrazoEstimado:  request.PrazoEstimado,
 		Status:         model.StatusPendente,
 	}
+    vaga.Prestador.IDUsuario = proposta.IDPrestador
+    vaga.Status = model.StatusProposta
+    if err := uc.vagaRepo.Salvar(ctx, vaga); err != nil {
+        return err
+    }
 	return uc.propostaRepo.Salvar(ctx, proposta)
 }
-
-
 
 func (uc *PropostaUseCase) Responder(ctx context.Context, idProposta, idUsuario uint, aceitar bool) error {
     proposta, err := uc.propostaRepo.BuscarPorID(ctx, idProposta)
