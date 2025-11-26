@@ -90,6 +90,9 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Catalogo{},
 		&model.Proposta{},
 		&model.Agendamento{},
+		&model.AnexoImagem{},
+		&model.Galeria{},
+		&model.Imagem{},
 	)
 }
 

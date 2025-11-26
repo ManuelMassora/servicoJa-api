@@ -4,23 +4,42 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
 	"github.com/gin-gonic/gin"
 )
 
 type VagaHandler struct {
-	uc usecases.VagaUseCase
+	uc       usecases.VagaUseCase
+	uploader *services.SupabaseUploader
 }
 
-func NewVagaHandler(uc usecases.VagaUseCase) *VagaHandler {
-	return &VagaHandler{uc: uc}
+func NewVagaHandler(uc usecases.VagaUseCase, uploader *services.SupabaseUploader) *VagaHandler {
+	return &VagaHandler{uc: uc, uploader: uploader}
 }
 
 func (h *VagaHandler) CriarVaga(c *gin.Context) {
 	var req usecases.VagaRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados de requisição inválidos", "details": err.Error()})
 		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao processar formulário multipart: " + err.Error()})
+		return
+	}
+
+	files := form.File["anexos"]
+	for _, file := range files {
+		_, fileName, err := h.uploader.Upload(c.Request.Context(), file)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao fazer upload do anexo: " + err.Error()})
+			return
+		}
+		publicURL := h.uploader.GetPublicURL("serviceja-image", fileName)
+		req.Anexos = append(req.Anexos, publicURL)
 	}
 
 	idUsuario, err := getUsuarioID(c)

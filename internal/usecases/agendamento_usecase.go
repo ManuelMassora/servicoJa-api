@@ -9,11 +9,12 @@ import (
 )
 
 type AgendamentoUC struct {
-	r model.AgendamentoRepo
-	catalogoRepo model.CatalogoRepo
-	servico model.ServicoRepo
-	notifacaoRepo model.NotificacaoRepo
-	usuarioRepo model.UsuarioRepo
+	r               model.AgendamentoRepo
+	catalogoRepo    model.CatalogoRepo
+	servico         model.ServicoRepo
+	notifacaoRepo   model.NotificacaoRepo
+	usuarioRepo     model.UsuarioRepo
+	anexoImagemRepo model.AnexoImagemRepo
 }
 
 func NewAgendamentoUC(
@@ -22,12 +23,14 @@ func NewAgendamentoUC(
 	servico model.ServicoRepo,
 	notifacaoRepo model.NotificacaoRepo,
 	usuarioRepo model.UsuarioRepo,
+	anexoImagemRepo model.AnexoImagemRepo,
 ) *AgendamentoUC {
 	return &AgendamentoUC{r: r,
-		catalogoRepo: catalogoRepo,
-		servico: servico,
-		notifacaoRepo: notifacaoRepo,
-		usuarioRepo: usuarioRepo,
+		catalogoRepo:    catalogoRepo,
+		servico:         servico,
+		notifacaoRepo:   notifacaoRepo,
+		usuarioRepo:     usuarioRepo,
+		anexoImagemRepo: anexoImagemRepo,
 	}
 }
 
@@ -38,6 +41,7 @@ type AgendamentoRequest struct {
 	Localizacao string   	`json:"localizacao" binding:"required"`
 	Latitude    float64  	`json:"latitude" binding:"required"`
 	Longitude   float64  	`json:"longitude" binding:"required"`
+	Anexos      []string    `json:"anexos"`
 }
 
 type AgendamentoResponse struct {
@@ -58,15 +62,38 @@ func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCl
 	if err != nil {
 		return err
 	}
-	// // Verificar se o prestador está disponível na data/hora solicitada
-	// if !catalogo.Prestador.DisponivelNaDataHora(ctx, req.DataHora) {
-	// 	return errors.New("o prestador não está disponível na data/hora solicitada")
-	// }
-	// // Criar a notificação para o prestador
+
+	agendamento := &model.Agendamento{
+		Detalhe:     req.Detalhe,
+		IDCatalogo:  req.IDCatalogo,
+		IDCliente:   idCliente,
+		DataHora:    req.DataHora,
+		Status:      "PENDENTE",
+		Localizacao: req.Localizacao,
+		Latitude:    req.Latitude,
+		Longitude:   req.Longitude,
+	}
+
+	err = uc.r.Criar(ctx, agendamento)
+	if err != nil {
+		return err
+	}
+
+	for _, anexoURL := range req.Anexos {
+		anexo := &model.AnexoImagem{
+			URL:           anexoURL,
+			AgendamentoID: &agendamento.ID,
+		}
+		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
+			// In a real application, you might want to handle the rollback of the agendamento creation
+			return err
+		}
+	}
+
 	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
 		IDUsuario: catalogo.Prestador.IDUsuario,
-		Titulo: "Novo Agendamento",
-		Mensagem: "Você tem um novo agendamento para o serviço: " + catalogo.Nome,
+		Titulo:    "Novo Agendamento",
+		Mensagem:  "Você tem um novo agendamento para o serviço: " + catalogo.Nome,
 	})
 	if err != nil {
 		return err
@@ -75,16 +102,7 @@ func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCl
 	if err != nil {
 		return err
 	}
-	return uc.r.Criar(ctx, &model.Agendamento{
-		Detalhe: req.Detalhe,
-		IDCatalogo: req.IDCatalogo,
-		IDCliente: idCliente,
-		DataHora: req.DataHora,
-		Status: "PENDENTE",
-		Localizacao: req.Localizacao,
-		Latitude: req.Latitude,
-		Longitude: req.Longitude,
-	})
+	return nil
 }
 
 func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*AgendamentoResponse, error) {

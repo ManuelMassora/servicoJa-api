@@ -4,24 +4,45 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
 	"github.com/gin-gonic/gin"
 )
 
 type AgendamentoHandler struct {
-	uc usecases.AgendamentoUC
+	uc       usecases.AgendamentoUC
+	uploader *services.SupabaseUploader
 }
 
-func NewAgendamentoHandler(uc usecases.AgendamentoUC) *AgendamentoHandler {
-	return &AgendamentoHandler{uc: uc}
+func NewAgendamentoHandler(uc usecases.AgendamentoUC, uploader *services.SupabaseUploader) *AgendamentoHandler {
+	return &AgendamentoHandler{uc: uc, uploader: uploader}
 }
 
 func (h *AgendamentoHandler) Criar(c *gin.Context) {
 	var req usecases.AgendamentoRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: " + err.Error()})
 		return
+	}
+
+	form, err := c.MultipartForm()
+	// No need to check for err, as ShouldBind would have already caught it.
+	// But it is good practice to check it anyway.
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao processar formulário multipart: " + err.Error()})
+		return
+	}
+
+	files := form.File["anexos"]
+	for _, file := range files {
+		_, fileName, err := h.uploader.Upload(c.Request.Context(), file)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao fazer upload do anexo: " + err.Error()})
+			return
+		}
+		publicURL := h.uploader.GetPublicURL("serviceja-image", fileName)
+		req.Anexos = append(req.Anexos, publicURL)
 	}
 
 	idCliente, err := getUsuarioID(c)

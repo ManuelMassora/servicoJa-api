@@ -16,6 +16,7 @@ type Vaga struct {
 	IDPrestador *uint    `json:"prestador_id,omitempty"` // nulo até alguém aceitar
 	Prestador   *Prestador `gorm:"foreignKey:IDPrestador" json:"prestador,omitempty"`
 	Urgente     bool     `gorm:"column:urgente;not null;default:false" json:"urgente"`
+	Anexos      []AnexoImagem `gorm:"foreignKey:VagaID"`
 }
 
 type VagaRepo interface {

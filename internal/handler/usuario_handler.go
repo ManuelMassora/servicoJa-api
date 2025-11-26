@@ -1,19 +1,28 @@
 package handler
 
 import (
+	"bytes"
+	"fmt"
+	"mime"
 	"strconv"
+	"time"
 
-	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/ManuelMassora/servicoJa-api/internal/services"
+	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
+	"github.com/ManuelMassora/servicoJa-api/pkg"
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type UsuarioHandler struct {
-	uc usecases.UsuarioUseCase
+	uc       usecases.UsuarioUseCase
+	uploader *services.SupabaseUploader
 }
 
-func NewUsuarioHandler(uc usecases.UsuarioUseCase) *UsuarioHandler {
-	return &UsuarioHandler{uc: uc}
+func NewUsuarioHandler(uc usecases.UsuarioUseCase, uploader *services.SupabaseUploader) *UsuarioHandler {
+	return &UsuarioHandler{uc: uc, uploader: uploader}
 }
 
 func (h *UsuarioHandler) CriarAdmin(c *gin.Context) {
@@ -31,10 +40,45 @@ func (h *UsuarioHandler) CriarAdmin(c *gin.Context) {
 
 func (h *UsuarioHandler) CriarCliente(c *gin.Context) {
 	var request usecases.UsuarioRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(400, gin.H{"erro": "ao converter para JSON"})
+	if err := c.ShouldBind(&request); err != nil {
+		c.JSON(400, gin.H{"erro": "ao converter dados do formulário"})
 		return
 	}
+
+	file, err := c.FormFile("imagem")
+	if err != nil && err != http.ErrMissingFile {
+		c.JSON(4.0, gin.H{"erro": "ao obter arquivo de imagem"})
+		return
+	}
+
+	if file != nil {
+		// COMPRIME AUTOMATICAMENTE para no máximo ~300 KB
+		compressedBuf, format, err := pkg.CompressImage(file, 100) // ← 300 KB máximo
+		if err != nil {
+			c.JSON(500, gin.H{"erro": "falha ao processar imagem"})
+			return
+		}
+
+		// Gera um nome de arquivo único
+		fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
+		
+		// Determina o Content-Type
+		contentType := mime.TypeByExtension("." + format)
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		// Faz o upload do buffer comprimido diretamente
+		_, fileName, err = h.uploader.UploadFromReader(c.Request.Context(), bytes.NewReader(compressedBuf.Bytes()), fileName, contentType)
+		if err != nil {
+			c.JSON(500, gin.H{"erro": "ao fazer upload da imagem, " + err.Error()})
+			return
+		}
+
+		request.ImagemURL = h.uploader.GetPublicURL("serviceja-image", fileName)
+	}
+
+
 	if err := h.uc.CriarCliente(c.Request.Context(), request); err != nil {
 		c.JSON(400, gin.H{"erro": "ao salvar cliente, " + err.Error()})
 		return
@@ -44,10 +88,47 @@ func (h *UsuarioHandler) CriarCliente(c *gin.Context) {
 
 func (h *UsuarioHandler) CriarPrestador(c *gin.Context) {
 	var request usecases.PrestadorRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(400, gin.H{"erro": "ao converter para JSON"})
+	if err := c.ShouldBindWith(&request, binding.FormMultipart); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "erro":    "falha ao processar formulário",
+            "detalhe": err.Error(),
+        })
+        return
+    }
+
+	file, err := c.FormFile("imagem")
+	if err != nil && err != http.ErrMissingFile {
+		c.JSON(400, gin.H{"erro": "ao obter arquivo de imagem"})
 		return
 	}
+
+	if file != nil {
+		// COMPRIME AUTOMATICAMENTE para no máximo ~300 KB
+		compressedBuf, format, err := pkg.CompressImage(file, 100) // ← 300 KB máximo
+		if err != nil {
+			c.JSON(500, gin.H{"erro": "falha ao processar imagem"})
+			return
+		}
+
+		// Gera um nome de arquivo único
+		fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
+		
+		// Determina o Content-Type
+		contentType := mime.TypeByExtension("." + format)
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		// Faz o upload do buffer comprimido diretamente
+		_, fileName, err = h.uploader.UploadFromReader(c.Request.Context(), bytes.NewReader(compressedBuf.Bytes()), fileName, contentType)
+		if err != nil {
+			c.JSON(500, gin.H{"erro": "ao fazer upload da imagem, " + err.Error()})
+			return
+		}
+
+		request.ImagemURL = h.uploader.GetPublicURL("serviceja-image", fileName)
+	}
+
 	if err := h.uc.CriarPrestador(c.Request.Context(), request); err != nil {
 		c.JSON(400, gin.H{"erro": "ao salvar prestador, " + err.Error()})
 		return

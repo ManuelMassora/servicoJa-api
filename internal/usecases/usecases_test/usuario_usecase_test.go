@@ -96,15 +96,13 @@ func TestUsuarioUseCase_CriarPrestador_Sucesso(t *testing.T) {
 
 	ctx := context.Background()
 	req := usecases.PrestadorRequest{
-		Usuario: usecases.UsuarioRequest{
-			Nome:     "Prestador X",
-			Telefone: "111222333",
-			Senha:    "senha789",
-		},
+		Nome:     "Prestador X",
+		Telefone: "111222333",
+		Senha:    "senha789",
 		Localizacao:   "Maputo",
 	}
 
-	usuarioRepo.On("BuscarPorTelefone", ctx, req.Usuario.Telefone).Return((*model.Usuario)(nil), gorm.ErrRecordNotFound)
+	usuarioRepo.On("BuscarPorTelefone", ctx, req.Telefone).Return((*model.Usuario)(nil), gorm.ErrRecordNotFound)
 	prestadorRepo.On("Criar", ctx, mock.AnythingOfType("*model.Prestador")).Return(nil)
 
 	err := uc.CriarPrestador(ctx, req)

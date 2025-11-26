@@ -43,7 +43,7 @@ func main() {
 	sqlDB, _ := db.DB()
 	defer sqlDB.Close()
 
-	container := di.NewContainer(db)
+	container := di.NewContainer(db, cfg)
 	routes.SetRoutes(server, container)
 
 	log.Printf("Servidor rodando na porta :%s", cfg.ServerPort)

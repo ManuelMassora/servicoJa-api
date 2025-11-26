@@ -1,6 +1,7 @@
 package di
 
 import (
+	"github.com/ManuelMassora/servicoJa-api/internal/config"
 	"github.com/ManuelMassora/servicoJa-api/internal/handler"
 	"github.com/ManuelMassora/servicoJa-api/internal/infra/repo"
 	"github.com/ManuelMassora/servicoJa-api/internal/middleware"
@@ -22,11 +23,13 @@ type Container struct {
 	PropostaRepo *repo.PropostaRepository
 	NotificacaoRepo *repo.NotificacaoRepo
 	AvaliacaoRepo *repo.AvaliacaoRepo
-
+	AnexoImagemRepo *repo.AnexoImagemRepo
+	GaleriaRepo *repo.GaleriaRepo
 
 	//Services
 	AuthService *services.AuthUSer
 	JwtService 	*middleware.JwtService
+	Uploader *services.SupabaseUploader
 
 	//UseCases
 	CategoriaUC *usecases.CategoriaUseCase
@@ -38,6 +41,8 @@ type Container struct {
 	VagaUC *usecases.VagaUseCase
 	NotificacaoUC *usecases.NotificacaoUseCase
 	AvaliacaoUC *usecases.AvaliacaoUseCase
+	AnexoImagemUC *usecases.AnexoImagemUseCase
+	GaleriaUC *usecases.GaleriaUseCase
 		
 	//Handler
 	CategoriaH	*handler.CategoriaHandler
@@ -50,9 +55,11 @@ type Container struct {
 	VagaH *handler.VagaHandler
 	NotificacaoH *handler.NotificacaoHandler
 	AvaliacaoH *handler.AvaliacaoHandler
+	// AnexoImagemH *handler.AnexoImagemHandler
+	GaleriaH *handler.GaleriaHandler
 }
 
-func NewContainer(db *gorm.DB) *Container {
+func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c := &Container{}
 
 	//Init Repositories
@@ -67,31 +74,34 @@ func NewContainer(db *gorm.DB) *Container {
 	c.PropostaRepo = repo.NewPropostaRepository(db).(*repo.PropostaRepository)
 	c.NotificacaoRepo = repo.NewNotificacaoRepo(db).(*repo.NotificacaoRepo)
 	c.AvaliacaoRepo = repo.NewAvaliacaoRepository(db).(*repo.AvaliacaoRepo)
+	c.AnexoImagemRepo = repo.NewAnexoImagemRepo(db).(*repo.AnexoImagemRepo)
+	c.GaleriaRepo = repo.NewGaleriaRepo(db).(*repo.GaleriaRepo)
 
 
 	//Init Services
 	c.JwtService = middleware.NewJWTService()
 	c.AuthService = services.NewAuthUser(c.UsuarioRepo, c.JwtService)
+	c.Uploader = services.NewSupabaseUploader(cfg)
 	//Init UseCases
 	c.CategoriaUC = usecases.NewCategoriaUseCase(c.CategoriaRepo)
 	c.UsuarioUC = usecases.NewUsuarioUseCase(c.UsuarioRepo, c.ClienteRepo, c.PrestadorRepo)
-	c.CatalogoUC = usecases.NewCatalogoUC(c.CatalogoRepo)
-	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.CatalogoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
+	c.CatalogoUC = usecases.NewCatalogoUC(c.CatalogoRepo, c.AnexoImagemRepo)
+	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.CatalogoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo, c.AnexoImagemRepo)
 	c.ServicoUC = usecases.NewServicoUseCase(c.ServicoRepo, c.AgendamentoRepo, c.VagaRepo, c.NotificacaoRepo, c.UsuarioRepo)
 	c.PropostaUC = usecases.NewPropostaUseCase(c.PropostaRepo, c.VagaRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
-	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo)
+	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo, c.AnexoImagemRepo)
 	c.NotificacaoUC = usecases.NewNotificacaoUseCase(c.NotificacaoRepo, c.UsuarioRepo)
 	c.AvaliacaoUC = usecases.NewAvaliacaoUseCase(c.AvaliacaoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
 
 	//Init Handler
 	c.CategoriaH = handler.NewCategoriaHandler(*c.CategoriaUC)
-	c.UsuarioH = handler.NewUsuarioHandler(*c.UsuarioUC)
+	c.UsuarioH = handler.NewUsuarioHandler(*c.UsuarioUC, c.Uploader)
 	c.AuthHandler = handler.NewAuthHandler(*c.AuthService)
-	c.CatalogoH = handler.NewCatalogoHandler(*c.CatalogoUC)
-	c.AgendamentoH = handler.NewAgendamentoHandler(*c.AgendamentoUC)
+	c.CatalogoH = handler.NewCatalogoHandler(*c.CatalogoUC, c.Uploader)
+	c.AgendamentoH = handler.NewAgendamentoHandler(*c.AgendamentoUC, c.Uploader)
 	c.ServicoH = handler.NewServicoHandler(*c.ServicoUC)
 	c.PropostaH = handler.NewPropostaHandler(*c.PropostaUC)
-	c.VagaH = handler.NewVagaHandler(*c.VagaUC)
+	c.VagaH = handler.NewVagaHandler(*c.VagaUC, c.Uploader)
 	c.NotificacaoH = handler.NewNotificacaoHandler(*c.NotificacaoUC)
 	c.AvaliacaoH = handler.NewAvaliacaoHandler(*c.AvaliacaoUC)
 	return c

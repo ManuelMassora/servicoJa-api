@@ -9,21 +9,23 @@ import (
 )
 
 type VagaUseCase struct {
-	vagaRepo model.VagaRepo
+	vagaRepo        model.VagaRepo
+	anexoImagemRepo model.AnexoImagemRepo
 }
 
-func NewVagaUseCase(vagaRepo model.VagaRepo) *VagaUseCase {
-	return &VagaUseCase{vagaRepo: vagaRepo}
+func NewVagaUseCase(vagaRepo model.VagaRepo, anexoImagemRepo model.AnexoImagemRepo) *VagaUseCase {
+	return &VagaUseCase{vagaRepo: vagaRepo, anexoImagemRepo: anexoImagemRepo}
 }
 
 type VagaRequest struct {
-	Titulo      string  `json:"titulo" binding:"required"`
-	Descricao   string  `json:"descricao" binding:"required"`
-	Localizacao string  `json:"localizacao" binding:"required"`
-	Latitude    float64 `json:"latitude" binding:"required"`
-	Longitude   float64 `json:"longitude" binding:"required"`
-	Preco       float64 `json:"preco" binding:"required,gte=0"`
-	Urgente     bool    `json:"urgente"`
+	Titulo      string   `json:"titulo" binding:"required"`
+	Descricao   string   `json:"descricao" binding:"required"`
+	Localizacao string   `json:"localizacao" binding:"required"`
+	Latitude    float64  `json:"latitude" binding:"required"`
+	Longitude   float64  `json:"longitude" binding:"required"`
+	Preco       float64  `json:"preco" binding:"required,gte=0"`
+	Urgente     bool     `json:"urgente"`
+	Anexos      []string `json:"anexos"`
 }
 
 type VagaResponse struct {
@@ -52,7 +54,22 @@ func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario 
 		IDCliente:   idUsuario,
 		Urgente:     req.Urgente,
 	}
-	return uc.vagaRepo.Criar(ctx, vaga)
+	if err := uc.vagaRepo.Criar(ctx, vaga); err != nil {
+		return err
+	}
+
+	for _, anexoURL := range req.Anexos {
+		anexo := &model.AnexoImagem{
+			URL:    anexoURL,
+			VagaID: &vaga.ID,
+		}
+		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
+			// In a real application, you might want to handle the rollback of the vaga creation
+			return err
+		}
+	}
+
+	return nil
 }
 
 func(uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) error {

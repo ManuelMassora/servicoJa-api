@@ -32,5 +32,5 @@ func (h *AuthHandler) Authenticate(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusAccepted, gin.H{"token":token})
+	ctx.JSON(http.StatusAccepted, token)
 }

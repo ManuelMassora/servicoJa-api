@@ -27,30 +27,36 @@ func NewUsuarioUseCase(
 }
 
 type UsuarioRequest struct {
-	Nome     string `json:"nome" binding:"required"`
-	Telefone string `json:"telefone" binding:"required"`
-	Senha    string `json:"senha,omitempty" binding:"required"`
+	Nome      string `json:"nome" binding:"required"`
+	Telefone  string `json:"telefone" binding:"required"`
+	Senha     string `json:"senha,omitempty" binding:"required"`
+	ImagemURL string `json:"imagem_url"`
 }
 
 type UsuarioResponse struct {
-	Nome     string `json:"nome"`
-	Telefone string `json:"telefone"`
+	Nome      string `json:"nome"`
+	Telefone  string `json:"telefone"`
+	ImagemURL string `json:"imagem_url"`
 }
 
 type PrestadorRequest struct {
-	Usuario 		UsuarioRequest	`json:"usuario" binding:"required"`
-	Localizacao     string   		`json:"localizacao" binding:"required"`
-	Latitude    	float64  		`json:"latitude" binding:"required"`
-	Longitude   	float64  		`json:"longitude" binding:"required"`
+	Nome        string  `form:"nome" binding:"required"`
+	Telefone    string  `form:"telefone" binding:"required"`
+	Senha       string  `form:"senha" binding:"required"`
+	ImagemURL   string	`form:"-"`
+	Localizacao string  `form:"localizacao" binding:"required"`
+	Latitude    float64 `form:"latitude" binding:"required"`
+	Longitude   float64 `form:"longitude" binding:"required"`
 }
 
 type PrestadorResponse struct {
-	Nome     		string 	`json:"nome"`
-	Telefone 		string 	`json:"telefone"`
-	Localizacao     string  `json:"localizacao"`
-	Latitude    	float64 `json:"latitude"`
-	Longitude   	float64 `json:"longitude"`
-	Disponivel     	bool  	`json:"disponivel"`
+	Nome        string  `json:"nome"`
+	Telefone    string  `json:"telefone"`
+	Localizacao string  `json:"localizacao"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	Disponivel  bool    `json:"disponivel"`
+	ImagemURL   string  `json:"imagem_url"`
 }
 
 func (uc *UsuarioUseCase) CriarAdmin(ctx context.Context, request UsuarioRequest) error{
@@ -69,7 +75,7 @@ func (uc *UsuarioUseCase) CriarCliente(ctx context.Context, request UsuarioReque
 	if err := uc.SeTelefoneExiste(ctx, request.Telefone); err != nil {
 		return err
 	}
-	cliente, err := model.NewCliente(request.Nome, request.Telefone, request.Senha)
+	cliente, err := model.NewCliente(request.Nome, request.Telefone, request.Senha, request.ImagemURL)
 	if err != nil {
 		return err
 	} 
@@ -77,16 +83,17 @@ func (uc *UsuarioUseCase) CriarCliente(ctx context.Context, request UsuarioReque
 }
 
 func (uc *UsuarioUseCase) CriarPrestador(ctx context.Context, request PrestadorRequest) error{
-	if err := uc.SeTelefoneExiste(ctx, request.Usuario.Telefone); err != nil {
+	if err := uc.SeTelefoneExiste(ctx, request.Telefone); err != nil {
 		return err
 	}
 	prestador, err := model.NewPrestador(
 		request.Localizacao,
 		request.Latitude,
 		request.Longitude,
-		request.Usuario.Nome,
-		request.Usuario.Telefone,
-		request.Usuario.Senha)
+		request.Nome,
+		request.Telefone,
+		request.Senha,
+		request.ImagemURL)
 	if err != nil {
 		return err
 	}
@@ -101,9 +108,26 @@ func(uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[st
 
 	response := make([]UsuarioResponse, 0, len(usuarios))
 	for _, u := range usuarios {
+		// Since ImagemURL is in Cliente/Prestador, we need to fetch them.
+		// This is a simplification. In a real app, you might want to join tables for efficiency.
+		var imagemURL string
+		switch u.RolePermissao.Role {
+			case "CLIENTE":
+				cliente, err := uc.clienteRepo.BuscarPorID(ctx, u.ID)
+				if err == nil {
+					imagemURL = cliente.ImagemURL
+				}
+			case "PRESTADOR":
+				prestador, err := uc.prestadorRepo.BuscarPorID(ctx, u.ID)
+				if err == nil {
+					imagemURL = prestador.ImagemURL
+				}
+		}
+
 		response = append(response, UsuarioResponse{
-			Nome: u.Nome,
-			Telefone: u.Telefone,
+			Nome:      u.Nome,
+			Telefone:  u.Telefone,
+			ImagemURL: imagemURL,
 		})
 	}
 	return response, nil
@@ -118,12 +142,13 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
 		response = append(response, PrestadorResponse{
-			Nome: p.Nome,
-			Telefone: p.Telefone,
+			Nome:        p.Nome,
+			Telefone:    p.Telefone,
 			Localizacao: p.Localizacao,
-			Latitude: p.Latitude,
-			Longitude: p.Longitude,
-			Disponivel: p.StatusDisponivel,
+			Latitude:    p.Latitude,
+			Longitude:   p.Longitude,
+			Disponivel:  p.StatusDisponivel,
+			ImagemURL:   p.ImagemURL,
 		})
 	}
 	return response, nil
@@ -138,12 +163,13 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
 		response = append(response, PrestadorResponse{
-			Nome: p.Nome,
-			Telefone: p.Telefone,
+			Nome:        p.Nome,
+			Telefone:    p.Telefone,
 			Localizacao: p.Localizacao,
-			Latitude: p.Latitude,
-			Longitude: p.Longitude,
-			Disponivel: p.StatusDisponivel,
+			Latitude:    p.Latitude,
+			Longitude:   p.Longitude,
+			Disponivel:  p.StatusDisponivel,
+			ImagemURL:   p.ImagemURL,
 		})
 	}
 	return response, nil

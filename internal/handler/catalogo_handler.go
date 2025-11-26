@@ -4,23 +4,42 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
 	"github.com/gin-gonic/gin"
 )
 
 type CatalogoHandler struct {
-	uc usecases.CatalogoUseCase
+	uc       usecases.CatalogoUseCase
+	uploader *services.SupabaseUploader
 }
 
-func NewCatalogoHandler(uc usecases.CatalogoUseCase) *CatalogoHandler {
-	return &CatalogoHandler{uc: uc}
+func NewCatalogoHandler(uc usecases.CatalogoUseCase, uploader *services.SupabaseUploader) *CatalogoHandler {
+	return &CatalogoHandler{uc: uc, uploader: uploader}
 }
 
 func (h *CatalogoHandler) Criar(c *gin.Context) {
 	var request usecases.RequestCreateCatalogo
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao processar formulário multipart: " + err.Error()})
+		return
+	}
+
+	files := form.File["anexos"]
+	for _, file := range files {
+		_, fileName, err := h.uploader.Upload(c.Request.Context(), file)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao fazer upload do anexo: " + err.Error()})
+			return
+		}
+		publicURL := h.uploader.GetPublicURL("serviceja-image", fileName)
+		request.Anexos = append(request.Anexos, publicURL)
 	}
 
 	prestadorID, err := getUsuarioID(c)

@@ -8,13 +8,15 @@ import (
 )
 
 type CatalogoUseCase struct {
-	r model.CatalogoRepo
+	r               model.CatalogoRepo
+	anexoImagemRepo model.AnexoImagemRepo
 }
 
 func NewCatalogoUC(
 	r model.CatalogoRepo,
-	) *CatalogoUseCase{
-	return &CatalogoUseCase{r: r}
+	anexoImagemRepo model.AnexoImagemRepo,
+) *CatalogoUseCase {
+	return &CatalogoUseCase{r: r, anexoImagemRepo: anexoImagemRepo}
 }
 
 type RequestCreateCatalogo struct {
@@ -27,6 +29,7 @@ type RequestCreateCatalogo struct {
 	Localizacao 	string   `json:"localizacao" binding:"required"`
 	Latitude    	float64  `json:"latitude" binding:"required"`
 	Longitude   	float64  `json:"longitude" binding:"required"`
+	Anexos      	[]string `json:"anexos"`
 }
 type ResponseCatalogo struct {
 	ID		  	uint    `json:"id"`
@@ -45,16 +48,16 @@ type ResponseCatalogo struct {
 
 func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
 	catalogo := &model.Catalogo{
-		Nome: request.Nome,
-		Descricao: request.Descricao,
-		TipoPreco: request.TipoPreco,
-		ValorFixo: request.ValorFixo,
+		Nome:         request.Nome,
+		Descricao:    request.Descricao,
+		TipoPreco:    request.TipoPreco,
+		ValorFixo:    request.ValorFixo,
 		ValorPorHora: request.ValorPorHora,
-		IDCategoria: request.IdCategoria,
-		IDPrestador: idPrestador,
-		Localizacao: request.Localizacao,
-		Latitude: request.Latitude,
-		Longitude: request.Longitude,
+		IDCategoria:  request.IdCategoria,
+		IDPrestador:  idPrestador,
+		Localizacao:  request.Localizacao,
+		Latitude:     request.Latitude,
+		Longitude:    request.Longitude,
 	}
 	// Validation for pricing based on TipoPreco
 	if catalogo.TipoPreco == "fixo" && catalogo.ValorFixo <= 0 {
@@ -70,7 +73,22 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 		return errors.New("preco fixo nao pode ter valor por hora")
 	}
 
-	return uc.r.Create(ctx,catalogo)
+	if err := uc.r.Create(ctx, catalogo); err != nil {
+		return err
+	}
+
+	for _, anexoURL := range request.Anexos {
+		anexo := &model.AnexoImagem{
+			URL:        anexoURL,
+			CatalogoID: &catalogo.ID,
+		}
+		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
+			// In a real application, you might want to handle the rollback of the catalogo creation
+			return err
+		}
+	}
+
+	return nil
 }
 
 func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador uint, campos map[string]interface{}) error {

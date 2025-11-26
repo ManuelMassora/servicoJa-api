@@ -17,6 +17,7 @@ type Catalogo struct {
 	Localizacao string   `gorm:"column:localizacao;size:255;" json:"localizacao"`
 	Latitude    float64  `gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
 	Longitude   float64  `gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
+	Anexos      []AnexoImagem `gorm:"foreignKey:CatalogoID"`
 }
 
 type CatalogoRepo interface {

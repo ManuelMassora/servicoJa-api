@@ -11,6 +11,8 @@ import (
 type Config struct {
 	DatabaseDSN        string
 	ServerPort         string
+	SupabaseURL        string
+	SupabaseKey        string
 }
 
 func LoadConfig(envPath string) (*Config, error) {
@@ -26,18 +28,22 @@ func LoadConfig(envPath string) (*Config, error) {
 	}
 
 	serverPort := os.Getenv("SERVER_PORT")
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	supabaseKey := os.Getenv("SUPABASE_SERVICE_KEY")
 
 	if dbDSN == "" {
 		return nil, fmt.Errorf("DATABASE_DSN environment variable is not set")
 	}
 
-	if dbDSN == "" {
-		return nil, fmt.Errorf("configurações essenciais (DATABASE_DSN, S3_BUCKET_NAME, AWS_REGION) não estão definidas")
+	if supabaseURL == "" || supabaseKey == "" {
+		return nil, fmt.Errorf("SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables must be set")
 	}
 
 	cfg := &Config{
 		DatabaseDSN:        dbDSN,
 		ServerPort:         serverPort,
+		SupabaseURL:        supabaseURL,
+		SupabaseKey:        supabaseKey,
 	}
 	return cfg, nil
 }
