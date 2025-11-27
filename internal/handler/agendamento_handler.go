@@ -1,12 +1,20 @@
 package handler
 
 import (
+	"bytes"
+	"fmt"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
+	"github.com/ManuelMassora/servicoJa-api/pkg"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type AgendamentoHandler struct {
@@ -21,29 +29,75 @@ func NewAgendamentoHandler(uc usecases.AgendamentoUC, uploader *services.Supabas
 func (h *AgendamentoHandler) Criar(c *gin.Context) {
 	var req usecases.AgendamentoRequest
 
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindWith(&req, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: " + err.Error()})
 		return
 	}
 
 	form, err := c.MultipartForm()
-	// No need to check for err, as ShouldBind would have already caught it.
-	// But it is good practice to check it anyway.
+	
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao processar formulário multipart: " + err.Error()})
 		return
 	}
 
 	files := form.File["anexos"]
+	if len(files) > 3 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Limite de 3 imagens por agendamento excedido."})
+		return
+	}
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(files))
+	urlsCh := make(chan string, len(files))
+
 	for _, file := range files {
-		_, fileName, err := h.uploader.Upload(c.Request.Context(), file)
+		wg.Add(1)
+		go func(fileHeader *multipart.FileHeader) {
+			defer wg.Done()
+
+			compressedBuf, format, err := pkg.CompressImage(fileHeader, 150)
+			if err != nil {
+				errCh <- fmt.Errorf("falha ao processar imagem para upload: %w", err)
+				return
+			}
+
+			fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
+			contentType := mime.TypeByExtension("." + format)
+			if contentType == "" {
+				contentType = "application/octet-stream"
+			}
+
+			_, uploadedFileName, err := h.uploader.UploadFromReader(c.Request.Context(), bytes.NewReader(compressedBuf.Bytes()), fileName, contentType)
+			if err != nil {
+				errCh <- fmt.Errorf("falha ao fazer upload do anexo: %w", err)
+				return
+			}
+
+			publicURL := h.uploader.GetPublicURL("serviceja-image", uploadedFileName)
+			urlsCh <- publicURL
+		}(file)
+	}
+
+	wg.Wait()
+	close(errCh)
+	close(urlsCh)
+
+	// Verifica se ocorreu algum erro durante o upload
+	for err := range errCh {
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao fazer upload do anexo: " + err.Error()})
+			// Retorna o primeiro erro encontrado
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		publicURL := h.uploader.GetPublicURL("serviceja-image", fileName)
-		req.Anexos = append(req.Anexos, publicURL)
 	}
+
+	// Coleta todas as URLs dos uploads bem-sucedidos
+	var urls []string
+	for url := range urlsCh {
+		urls = append(urls, url)
+	}
+	req.Anexos = urls
 
 	idCliente, err := getUsuarioID(c)
 	if err != nil {
@@ -403,6 +457,12 @@ func (h *AgendamentoHandler) ListarPorCatalogID(c *gin.Context) {
 }
 
 func (h *AgendamentoHandler) ListarPorLocalizacao(c *gin.Context) {
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
 	latitude, err := strconv.ParseFloat(c.Query("latitude"), 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Latitude inválida"})
@@ -435,7 +495,7 @@ func (h *AgendamentoHandler) ListarPorLocalizacao(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	offset := (page - 1) * pageSize
 
-	agendamentos, err := h.uc.ListarPorLocalizacao(c.Request.Context(), latitude, longitude, radius, filters, orderBy, orderDir, pageSize, offset)
+	agendamentos, err := h.uc.ListarPorLocalizacao(c.Request.Context(), idUsuario, latitude, longitude, radius, filters, orderBy, orderDir, pageSize, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

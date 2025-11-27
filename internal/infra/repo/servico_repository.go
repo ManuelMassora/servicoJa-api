@@ -131,7 +131,7 @@ func (r *ServicoRepository) ListarPorPrestador(ctx context.Context, IDPrestador 
 	return servicos, nil
 }
 
-func (r *ServicoRepository) FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Servico, error) {
+func (r *ServicoRepository) FindByLocation(ctx context.Context, userID uint, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Servico, error) {
     var servicos []model.Servico
 
     haversine := fmt.Sprintf(
@@ -139,8 +139,9 @@ func (r *ServicoRepository) FindByLocation(ctx context.Context, latitude, longit
         latitude, longitude, latitude,
     )
 
-    query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
+    query := r.db.WithContext(ctx).Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
         Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+        Where("id_cliente = ? OR id_prestador = ?", userID, userID).
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").

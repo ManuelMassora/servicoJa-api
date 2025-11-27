@@ -17,7 +17,9 @@ type Imagem struct {
 type GaleriaRepo interface {
 	Create(ctx context.Context, galeria *Galeria) (*Galeria, error)
 	FindByID(ctx context.Context, id uint) (*Galeria, error)
-	FindByPrestadorID(ctx context.Context, prestadorID uint) ([]Galeria, error)
+	FindByPrestadorID(ctx context.Context, prestadorID uint) (*Galeria, error)
 	Delete(ctx context.Context, id uint) error
 	AddImage(ctx context.Context, imagem *Imagem) error
+	CountImages(ctx context.Context, galeriaID uint) (int64, error)
+	FindByGaleriaID(ctx context.Context, galeriaID uint) ([]Imagem, error)
 }

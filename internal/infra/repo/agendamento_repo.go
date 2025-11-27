@@ -145,7 +145,7 @@ func (r *AgendamentoRepo) ListarPorCatalogID(ctx context.Context, catalogoID uin
 	return agendamentos, nil
 }
 
-func (r *AgendamentoRepo) FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Agendamento, error) {
+func (r *AgendamentoRepo) FindByLocation(ctx context.Context, userID uint, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Agendamento, error) {
 	var agendamentos []model.Agendamento
 
 	haversine := fmt.Sprintf(
@@ -153,8 +153,10 @@ func (r *AgendamentoRepo) FindByLocation(ctx context.Context, latitude, longitud
 		latitude, longitude, latitude,
 	)
 
-	query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
+	query := r.db.WithContext(ctx).Select(fmt.Sprintf("agendamentos.*, (%s) AS distance", haversine)).
+		Joins("JOIN catalogos ON agendamentos.id_catalogo = catalogos.id").
 		Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+		Where("agendamentos.id_cliente = ? OR catalogos.id_prestador = ?", userID, userID).
 		Preload("Cliente").
 		Preload("Catalogo").
 		Preload("Catalogo.Prestador")

@@ -8,12 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// A função 'getUsuarioID' deve ser definida em algum lugar ou importada se estiver em outro pacote.
-// Para fins de exemplo, estou assumindo que ela existe e tem a seguinte assinatura:
-// func getUsuarioID(c *gin.Context) (uint64, error) { ... }
-// E que a função 'getServicoID' (para Finalizar/Cancelar) também existe:
-// func getServicoID(c *gin.Context) (uint, error) { ... }
-
 type ServicoHandler struct {
 	uc usecases.ServicoUseCase
 }
@@ -251,6 +245,12 @@ func getServicoID(c *gin.Context) (uint, error) {
 }
 
 func (h *ServicoHandler) ListarPorLocalizacao(c *gin.Context) {
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
 	latitude, err := strconv.ParseFloat(c.Query("latitude"), 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Latitude inválida"})
@@ -260,7 +260,7 @@ func (h *ServicoHandler) ListarPorLocalizacao(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Longitude inválida"})
 		return
-	}
+		}
 	radius, err := strconv.ParseFloat(c.DefaultQuery("radius", "10"), 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Raio inválido"})
@@ -283,7 +283,7 @@ func (h *ServicoHandler) ListarPorLocalizacao(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	offset := (page - 1) * pageSize
 
-	servicos, err := h.uc.ListarPorLocalizacao(c.Request.Context(), latitude, longitude, radius, filters, orderBy, orderDir, pageSize, offset)
+	servicos, err := h.uc.ListarPorLocalizacao(c.Request.Context(), uint(idUsuario), latitude, longitude, radius, filters, orderBy, orderDir, pageSize, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

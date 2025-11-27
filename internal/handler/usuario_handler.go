@@ -103,8 +103,7 @@ func (h *UsuarioHandler) CriarPrestador(c *gin.Context) {
 	}
 
 	if file != nil {
-		// COMPRIME AUTOMATICAMENTE para no máximo ~300 KB
-		compressedBuf, format, err := pkg.CompressImage(file, 100) // ← 300 KB máximo
+		compressedBuf, format, err := pkg.CompressImage(file, 100)
 		if err != nil {
 			c.JSON(500, gin.H{"erro": "falha ao processar imagem"})
 			return

@@ -1,12 +1,18 @@
 package handler
 
 import (
+	"bytes"
+	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
+	"github.com/ManuelMassora/servicoJa-api/pkg"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type VagaHandler struct {
@@ -20,7 +26,7 @@ func NewVagaHandler(uc usecases.VagaUseCase, uploader *services.SupabaseUploader
 
 func (h *VagaHandler) CriarVaga(c *gin.Context) {
 	var req usecases.VagaRequest
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindWith(&req, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados de requisição inválidos", "details": err.Error()})
 		return
 	}
@@ -32,13 +38,33 @@ func (h *VagaHandler) CriarVaga(c *gin.Context) {
 	}
 
 	files := form.File["anexos"]
+	if len(files) > 3 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Limite de 3 imagens por vaga excedido."})
+		return
+	}
+
 	for _, file := range files {
-		_, fileName, err := h.uploader.Upload(c.Request.Context(), file)
+		compressedBuf, format, err := pkg.CompressImage(file, 150)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao processar imagem para upload: " + err.Error()})
+			return
+		}
+
+		// Gera um nome de arquivo único
+		fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
+
+		// Determina o Content-Type
+		contentType := mime.TypeByExtension("." + format)
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		_, uploadedFileName, err := h.uploader.UploadFromReader(c.Request.Context(), bytes.NewReader(compressedBuf.Bytes()), fileName, contentType)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao fazer upload do anexo: " + err.Error()})
 			return
 		}
-		publicURL := h.uploader.GetPublicURL("serviceja-image", fileName)
+		publicURL := h.uploader.GetPublicURL("serviceja-image", uploadedFileName)
 		req.Anexos = append(req.Anexos, publicURL)
 	}
 

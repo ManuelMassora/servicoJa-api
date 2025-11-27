@@ -1,9 +1,9 @@
 package dto
 
 type ClienteInput struct {
-	Nome      string `json:"nome" binding:"required"`
-	Telefone  string `json:"telefone" binding:"required"`
-	Senha     string `json:"senha" binding:"required"`
+	Nome      string `json:"nome" form:"nome" binding:"required"`
+	Telefone  string `json:"telefone" form:"telefone" binding:"required"`
+	Senha     string `json:"senha" form:"senha" binding:"required"`
 	ImagemURL string
 }
 

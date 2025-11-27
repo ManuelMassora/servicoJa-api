@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/dto"
 	"github.com/ManuelMassora/servicoJa-api/internal/infra/repo"
@@ -16,26 +17,46 @@ func NewGaleriaUseCase(repo *repo.GaleriaRepo) *GaleriaUseCase {
 	return &GaleriaUseCase{repo: repo}
 }
 
-func (uc *GaleriaUseCase) CreateGaleria(ctx context.Context, input dto.GaleriaInput) (*model.Galeria, error) {
-	galeria := &model.Galeria{
-		PrestadorID: input.PrestadorID,
-	}
+func (uc *GaleriaUseCase) AddImagesToGaleria(ctx context.Context, prestadorID uint, galeriaImagem dto.GaleriaInput) (*model.Galeria, error) {
 
-	_, err := uc.repo.Create(ctx, galeria)
-	if err != nil {
-		return nil, err
-	}
+    galeria, err := uc.repo.FindByPrestadorID(ctx, prestadorID)
+    if err != nil {
+        return nil, err
+    }
 
-	for _, imagemInput := range input.Imagens {
-		imagem := &model.Imagem{
-			URL:       imagemInput.URL,
-			GaleriaID: galeria.ID,
-		}
-		err := uc.repo.AddImage(ctx, imagem)
-		if err != nil {
-			return nil, err
-		}
-	}
+    // Caso 1: Prestador ainda não tem galeria → criar automaticamente
+    if galeria == nil {
+        galeria = &model.Galeria{
+            PrestadorID: prestadorID,
+        }
 
-	return galeria, nil
+        if _, err := uc.repo.Create(ctx, galeria); err != nil {
+            return nil, err
+        }
+    }
+
+    // Busca quantas imagens já existem na galeria
+    totalExistentes, err := uc.repo.CountImages(ctx, galeria.ID)
+    if err != nil {
+        return nil, err
+    }
+
+    // Valida limite de imagens
+    if totalExistentes+int64(len(galeriaImagem.Imagens)) > 4 {
+        return nil, errors.New("a galeria pode ter no máximo 4 imagens")
+    }
+
+    // Adiciona as novas imagens
+    for _, imgInput := range galeriaImagem.Imagens {
+        img := &model.Imagem{
+            URL:       imgInput.URL,
+            GaleriaID: galeria.ID,
+        }
+
+        if err := uc.repo.AddImage(ctx, img); err != nil {
+            return nil, err
+        }
+    }
+
+    return galeria, nil
 }

@@ -20,16 +20,16 @@ func NewCatalogoUC(
 }
 
 type RequestCreateCatalogo struct {
-	Nome        	string   `json:"nome" binding:"required"`
-	Descricao   	string   `json:"descricao" binding:"required"`
-	TipoPreco		string 	 `json:"tipo_preco" binding:"required,oneof=fixo por_hora"`
-	ValorFixo   	float64  `json:"valor_fixo"`
-	ValorPorHora	float64  `json:"valor_por_hora"`
-	IdCategoria  	uint   	`json:"categoria_id" binding:"required"`
-	Localizacao 	string   `json:"localizacao" binding:"required"`
-	Latitude    	float64  `json:"latitude" binding:"required"`
-	Longitude   	float64  `json:"longitude" binding:"required"`
-	Anexos      	[]string `json:"anexos"`
+	Nome        	string   `json:"nome" form:"nome" binding:"required"`
+	Descricao   	string   `json:"descricao" form:"descricao" binding:"required"`
+	TipoPreco		string 	 `json:"tipo_preco" form:"tipo_preco" binding:"required,oneof=fixo por_hora"`
+	ValorFixo   	float64  `json:"valor_fixo" form:"valor_fixo"`
+	ValorPorHora	float64  `json:"valor_por_hora" form:"valor_por_hora"`
+	IdCategoria  	uint   	`json:"categoria_id" form:"categoria_id" binding:"required"`
+	Localizacao 	string   `json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude    	float64  `json:"latitude" form:"latitude" binding:"required"`
+	Longitude   	float64  `json:"longitude" form:"longitude" binding:"required"`
+	Anexos      	[]string `binding:"-"`
 }
 type ResponseCatalogo struct {
 	ID		  	uint    `json:"id"`

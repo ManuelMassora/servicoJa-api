@@ -18,14 +18,14 @@ func NewVagaUseCase(vagaRepo model.VagaRepo, anexoImagemRepo model.AnexoImagemRe
 }
 
 type VagaRequest struct {
-	Titulo      string   `json:"titulo" binding:"required"`
-	Descricao   string   `json:"descricao" binding:"required"`
-	Localizacao string   `json:"localizacao" binding:"required"`
-	Latitude    float64  `json:"latitude" binding:"required"`
-	Longitude   float64  `json:"longitude" binding:"required"`
-	Preco       float64  `json:"preco" binding:"required,gte=0"`
-	Urgente     bool     `json:"urgente"`
-	Anexos      []string `json:"anexos"`
+	Titulo      string   `json:"titulo" form:"titulo" binding:"required"`
+	Descricao   string   `json:"descricao" form:"descricao" binding:"required"`
+	Localizacao string   `json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude    float64  `json:"latitude" form:"latitude" binding:"required"`
+	Longitude   float64  `json:"longitude" form:"longitude" binding:"required"`
+	Preco       float64  `json:"preco" form:"preco" binding:"required,gte=0"`
+	Urgente     bool     `json:"urgente" form:"urgente"`
+	Anexos      []string `binding:"-"`
 }
 
 type VagaResponse struct {

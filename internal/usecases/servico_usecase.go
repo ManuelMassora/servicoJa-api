@@ -166,8 +166,8 @@ func (uc *ServicoUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint
 	return resp, nil
 }
 
-func (uc *ServicoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]ServicoResponse, error) {
-	servicos, err := uc.r.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+func (uc *ServicoUseCase) ListarPorLocalizacao(ctx context.Context, userID uint, latitude, longitude, radius float64, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]ServicoResponse, error) {
+	servicos, err := uc.r.FindByLocation(ctx, userID, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}

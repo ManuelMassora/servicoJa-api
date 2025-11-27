@@ -35,13 +35,13 @@ func NewAgendamentoUC(
 }
 
 type AgendamentoRequest struct {
-	Detalhe 	string 		`json:"detalhe" binding:"required"`
-	IDCatalogo  uint  		`json:"id_catalogo" binding:"required"`
-	DataHora 	time.Time   `json:"datahora" binding:"required"`
-	Localizacao string   	`json:"localizacao" binding:"required"`
-	Latitude    float64  	`json:"latitude" binding:"required"`
-	Longitude   float64  	`json:"longitude" binding:"required"`
-	Anexos      []string    `json:"anexos"`
+	Detalhe 	string 		`json:"detalhe" form:"detalhe" binding:"required"`
+	IDCatalogo  uint  		`json:"id_catalogo" form:"id_catalogo" binding:"required"`
+	DataHora 	time.Time   `json:"datahora" form:"datahora" binding:"required"`
+	Localizacao string   	`json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude    float64  	`json:"latitude" form:"latitude" binding:"required"`
+	Longitude   float64  	`json:"longitude" form:"longitude" binding:"required"`
+	Anexos      []string 	`binding:"-"`
 }
 
 type AgendamentoResponse struct {
@@ -298,8 +298,8 @@ func (uc *AgendamentoUC) ListarPorCatalogID(ctx context.Context, idUsuario, idCa
 	return resp, nil
 }
 
-func (uc *AgendamentoUC) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoResponse, error) {
-	agendamentos, err := uc.r.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+func (uc *AgendamentoUC) ListarPorLocalizacao(ctx context.Context, userID uint, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoResponse, error) {
+	agendamentos, err := uc.r.FindByLocation(ctx, userID, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}

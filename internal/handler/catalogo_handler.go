@@ -1,12 +1,21 @@
 package handler
 
 import (
+	"bytes"
+	"fmt"
+	"mime"
+	// "mime/multipart"
 	"net/http"
 	"strconv"
+	// "sync"
+	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
+	"github.com/ManuelMassora/servicoJa-api/pkg"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"golang.org/x/sync/errgroup"
 )
 
 type CatalogoHandler struct {
@@ -20,7 +29,7 @@ func NewCatalogoHandler(uc usecases.CatalogoUseCase, uploader *services.Supabase
 
 func (h *CatalogoHandler) Criar(c *gin.Context) {
 	var request usecases.RequestCreateCatalogo
-	if err := c.ShouldBind(&request); err != nil {
+	if err := c.ShouldBindWith(&request, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -32,15 +41,52 @@ func (h *CatalogoHandler) Criar(c *gin.Context) {
 	}
 
 	files := form.File["anexos"]
-	for _, file := range files {
-		_, fileName, err := h.uploader.Upload(c.Request.Context(), file)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao fazer upload do anexo: " + err.Error()})
-			return
-		}
-		publicURL := h.uploader.GetPublicURL("serviceja-image", fileName)
-		request.Anexos = append(request.Anexos, publicURL)
+	if len(files) > 3 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Limite de 3 imagens por catálogo excedido."})
+		return
 	}
+
+	g, ctx := errgroup.WithContext(c.Request.Context())
+	type result struct { idx int; url string }
+	resCh := make(chan result, len(files))
+
+	for i, file := range files {
+		i := i
+		file := file
+		g.Go(func() error {
+			comp, format, err := pkg.CompressImage(file, 150)
+			if err != nil { return fmt.Errorf("compress: %w", err) }
+
+			fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
+			contentType := mime.TypeByExtension("." + format)
+			if contentType == "" { contentType = "application/octet-stream" }
+
+			_, uploadedFileName, err := h.uploader.UploadFromReader(ctx, bytes.NewReader(comp.Bytes()), fileName, contentType)
+			if err != nil { return fmt.Errorf("upload: %w", err) }
+
+			resCh <- result{idx: i, url: h.uploader.GetPublicURL("serviceja-image", uploadedFileName)}
+			return nil
+		})
+	}
+
+	go func() {
+		if err := g.Wait(); err != nil {
+			// g will cancel ctx automatically, handle error later
+		}
+		close(resCh)
+	}()
+
+	// coletar resultados e ordenar por idx
+	var tmp = make([]string, len(files))
+	for r := range resCh {
+		tmp[r.idx] = r.url
+	}
+	request.Anexos = tmp
+	if err := g.Wait(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 
 	prestadorID, err := getUsuarioID(c)
 	if err != nil {
