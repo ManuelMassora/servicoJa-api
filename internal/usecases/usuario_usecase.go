@@ -12,17 +12,20 @@ type UsuarioUseCase struct {
 	usuarioRepo model.UsuarioRepo
 	clienteRepo model.ClienteRepo
 	prestadorRepo model.PrestadorRepo
+	galeriaRepo model.GaleriaRepo
 }
 
 func NewUsuarioUseCase(
 	usuarioRepo model.UsuarioRepo,
 	clienteRepo model.ClienteRepo,
 	prestadorRepo model.PrestadorRepo,
+	galeriaRepo model.GaleriaRepo,
 ) *UsuarioUseCase {
 	return &UsuarioUseCase{
 		usuarioRepo: usuarioRepo,
 		clienteRepo: clienteRepo,
 		prestadorRepo: prestadorRepo,
+		galeriaRepo: galeriaRepo,
 	}
 }
 
@@ -34,6 +37,7 @@ type UsuarioRequest struct {
 }
 
 type UsuarioResponse struct {
+	ID        uint   `json:"id"`
 	Nome      string `json:"nome"`
 	Telefone  string `json:"telefone"`
 	ImagemURL string `json:"imagem_url"`
@@ -50,6 +54,7 @@ type PrestadorRequest struct {
 }
 
 type PrestadorResponse struct {
+	ID          uint    `json:"id"`
 	Nome        string  `json:"nome"`
 	Telefone    string  `json:"telefone"`
 	Localizacao string  `json:"localizacao"`
@@ -57,6 +62,7 @@ type PrestadorResponse struct {
 	Longitude   float64 `json:"longitude"`
 	Disponivel  bool    `json:"disponivel"`
 	ImagemURL   string  `json:"imagem_url"`
+	Galeria	 	[]string `json:"galeria"`
 }
 
 func (uc *UsuarioUseCase) CriarAdmin(ctx context.Context, request UsuarioRequest) error{
@@ -125,6 +131,7 @@ func(uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[st
 		}
 
 		response = append(response, UsuarioResponse{
+			ID:        u.ID,
 			Nome:      u.Nome,
 			Telefone:  u.Telefone,
 			ImagemURL: imagemURL,
@@ -138,10 +145,27 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 	if err != nil {
 		return nil, err
 	}
-
+	prestadoresIDs := make([]uint, 0, len(prestadores))
+	for _, p := range prestadores {
+		prestadoresIDs = append(prestadoresIDs, p.IDUsuario)
+	}
+	galerias,  err := uc.galeriaRepo.FindByPrestadorIDs(ctx, prestadoresIDs)
+	if err != nil {
+		return nil, err
+	}
+	galeriaPrestadorMap := make(map[uint][]string)
+	for _, g := range galerias {
+		imagensURLs := make([]string, 0, len(g.Imagens))
+		for _, i := range g.Imagens {
+			imagensURLs = append(imagensURLs, i.URL)
+		}
+		galeriaPrestadorMap[g.PrestadorID] = imagensURLs
+	}
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
+		imagensURLs := galeriaPrestadorMap[p.IDUsuario]
 		response = append(response, PrestadorResponse{
+			ID:          p.IDUsuario,
 			Nome:        p.Nome,
 			Telefone:    p.Telefone,
 			Localizacao: p.Localizacao,
@@ -149,6 +173,7 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 			Longitude:   p.Longitude,
 			Disponivel:  p.StatusDisponivel,
 			ImagemURL:   p.ImagemURL,
+			Galeria:     imagensURLs,
 		})
 	}
 	return response, nil
@@ -159,10 +184,27 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 	if err != nil {
 		return nil, err
 	}
-
+	prestadoresIDs := make([]uint, 0, len(prestadores))
+	for _, p := range prestadores {
+		prestadoresIDs = append(prestadoresIDs, p.IDUsuario)
+	}
+	galerias,  err := uc.galeriaRepo.FindByPrestadorIDs(ctx, prestadoresIDs)
+	if err != nil {
+		return nil, err
+	}
+	galeriaPrestadorMap := make(map[uint][]string)
+	for _, g := range galerias {
+		imagensURLs := make([]string, 0, len(g.Imagens))
+		for _, i := range g.Imagens {
+			imagensURLs = append(imagensURLs, i.URL)
+		}
+		galeriaPrestadorMap[g.PrestadorID] = imagensURLs
+	}
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
+		imagensURLs := galeriaPrestadorMap[p.IDUsuario]
 		response = append(response, PrestadorResponse{
+			ID:          p.IDUsuario,
 			Nome:        p.Nome,
 			Telefone:    p.Telefone,
 			Localizacao: p.Localizacao,
@@ -170,6 +212,7 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 			Longitude:   p.Longitude,
 			Disponivel:  p.StatusDisponivel,
 			ImagemURL:   p.ImagemURL,
+			Galeria:     imagensURLs,
 		})
 	}
 	return response, nil

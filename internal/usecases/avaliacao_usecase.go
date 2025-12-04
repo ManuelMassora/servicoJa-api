@@ -38,11 +38,21 @@ type AvaliacaoResponse struct {
 	ID          uint      `json:"id"`
 	IDServico   uint      `json:"id_servico"`
 	Servico     string    `json:"servico"`
-	Avaliador   string    `json:"avaliador"`
-	Avaliado    string    `json:"avaliado"`
+	Avaliador   AvaliadorResponse    `json:"avaliador"`
+	Avaliado    AvaliadoResponse    `json:"avaliado"`
 	Pontuacao   int       `json:"pontuacao"`
 	Comentario  string    `json:"comentario"`
 	DataCriacao time.Time `json:"data_criacao"`
+}
+
+type AvaliadorResponse struct {
+	ID   uint   `json:"id"`
+	Nome string `json:"nome"`
+}
+
+type AvaliadoResponse struct {
+	ID   uint   `json:"id"`
+	Nome string `json:"nome"`
 }
 
 func (uc *AvaliacaoUseCase) Criar(ctx context.Context, req AvaliacaoRequest, idAvaliador uint) error {
@@ -102,35 +112,40 @@ func (uc *AvaliacaoUseCase) Criar(ctx context.Context, req AvaliacaoRequest, idA
 }
 
 func mapAvaliacoesToResponse(avaliacoes []model.Avaliacao) []AvaliacaoResponse {
-	if len(avaliacoes) == 0 {
-		return []AvaliacaoResponse{}
-	}
-	respostas := make([]AvaliacaoResponse, 0, len(avaliacoes))
-	for _, a := range avaliacoes {
-		avaliadorNome := ""
-		if a.Cliente != nil {
-			avaliadorNome = a.Cliente.Usuario.Nome
-		}
+    if len(avaliacoes) == 0 {
+        return []AvaliacaoResponse{}
+    }
+    respostas := make([]AvaliacaoResponse, 0, len(avaliacoes))
+    for _, a := range avaliacoes {
+        avaliador := AvaliadorResponse{}
+        if a.Cliente != nil {
+            avaliador = AvaliadorResponse{
+                ID:   a.Cliente.IDUsuario,
+                Nome: a.Cliente.Usuario.Nome,
+            }
+        }
 
-		avaliadoNome := ""
-		if a.Prestador != nil {
-			avaliadoNome = a.Prestador.Usuario.Nome
-		}
+        avaliado := AvaliadoResponse{}
+        if a.Prestador != nil {
+            avaliado = AvaliadoResponse{
+                ID:   a.Prestador.IDUsuario,
+                Nome: a.Prestador.Usuario.Nome,
+            }
+        }
 
-		respostas = append(respostas, AvaliacaoResponse{
-			ID:          a.ID,
-			IDServico:   a.IDServico,
-			Servico:     a.Servico.Localizacao, // Assumindo que queremos a localização como identificador do serviço
-			Avaliador:   avaliadorNome,
-			Avaliado:    avaliadoNome,
-			Pontuacao:   a.Nota,
-			Comentario:  a.Comentario,
-			DataCriacao: a.CreatedAt,
-		})
-	}
-	return respostas
+        respostas = append(respostas, AvaliacaoResponse{
+            ID:          a.ID,
+            IDServico:   a.IDServico,
+            Servico:     a.Servico.Localizacao,
+            Avaliador:   avaliador,
+            Avaliado:    avaliado,
+            Pontuacao:   a.Nota,
+            Comentario:  a.Comentario,
+            DataCriacao: a.CreatedAt,
+        })
+    }
+    return respostas
 }
-
 func (uc *AvaliacaoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]AvaliacaoResponse, error) {
 
 	avaliacoes, err := uc.avaliacaoRepo.ListarPorCliente(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)

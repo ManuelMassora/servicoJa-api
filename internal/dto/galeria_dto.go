@@ -1,9 +1,9 @@
 package dto
 
 type GaleriaInput struct {
-	Imagens []ImagemInput `json:"imagens" form:"imagens" binding:"required"`
+	Imagens []string `binding:"-"`
 }
 
 type ImagemInput struct {
-	URL string `json:"url" form:"url" binding:"required"`
+	URL string `binding:"-"`
 }

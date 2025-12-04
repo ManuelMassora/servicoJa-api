@@ -84,7 +84,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.Uploader = services.NewSupabaseUploader(cfg)
 	//Init UseCases
 	c.CategoriaUC = usecases.NewCategoriaUseCase(c.CategoriaRepo)
-	c.UsuarioUC = usecases.NewUsuarioUseCase(c.UsuarioRepo, c.ClienteRepo, c.PrestadorRepo)
+	c.UsuarioUC = usecases.NewUsuarioUseCase(c.UsuarioRepo, c.ClienteRepo, c.PrestadorRepo, c.GaleriaRepo)
 	c.CatalogoUC = usecases.NewCatalogoUC(c.CatalogoRepo, c.AnexoImagemRepo)
 	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.CatalogoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo, c.AnexoImagemRepo)
 	c.ServicoUC = usecases.NewServicoUseCase(c.ServicoRepo, c.AgendamentoRepo, c.VagaRepo, c.NotificacaoRepo, c.UsuarioRepo)
@@ -92,6 +92,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo, c.AnexoImagemRepo)
 	c.NotificacaoUC = usecases.NewNotificacaoUseCase(c.NotificacaoRepo, c.UsuarioRepo)
 	c.AvaliacaoUC = usecases.NewAvaliacaoUseCase(c.AvaliacaoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
+	c.GaleriaUC = usecases.NewGaleriaUseCase(c.GaleriaRepo)
 
 	//Init Handler
 	c.CategoriaH = handler.NewCategoriaHandler(*c.CategoriaUC)
@@ -104,5 +105,6 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.VagaH = handler.NewVagaHandler(*c.VagaUC, c.Uploader)
 	c.NotificacaoH = handler.NewNotificacaoHandler(*c.NotificacaoUC)
 	c.AvaliacaoH = handler.NewAvaliacaoHandler(*c.AvaliacaoUC)
+	c.GaleriaH = handler.NewGaleriaHandler(c.GaleriaUC, c.Uploader)
 	return c
 }

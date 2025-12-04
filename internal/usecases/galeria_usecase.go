@@ -26,11 +26,8 @@ func (uc *GaleriaUseCase) AddImagesToGaleria(ctx context.Context, prestadorID ui
 
     // Caso 1: Prestador ainda não tem galeria → criar automaticamente
     if galeria == nil {
-        galeria = &model.Galeria{
-            PrestadorID: prestadorID,
-        }
-
-        if _, err := uc.repo.Create(ctx, galeria); err != nil {
+        galeria, err = uc.repo.Create(ctx, &model.Galeria{PrestadorID: prestadorID})
+        if err != nil {
             return nil, err
         }
     }
@@ -47,9 +44,9 @@ func (uc *GaleriaUseCase) AddImagesToGaleria(ctx context.Context, prestadorID ui
     }
 
     // Adiciona as novas imagens
-    for _, imgInput := range galeriaImagem.Imagens {
+    for i := range galeriaImagem.Imagens {
         img := &model.Imagem{
-            URL:       imgInput.URL,
+            URL:       galeriaImagem.Imagens[i],
             GaleriaID: galeria.ID,
         }
 

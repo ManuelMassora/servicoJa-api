@@ -40,6 +40,7 @@ type VagaResponse struct {
 	Urgente     bool    `json:"urgente"`
 	Cliente    	string  `json:"cliente"`
 	DataCriacao string  `json:"data_criacao"`
+	Anexos      []string `json:"anexos"`
 }
 
 func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) error {
@@ -91,12 +92,26 @@ func(uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[st
 	if err != nil {
 		return nil, err
 	}
+	var vagasIDs []uint
+	for _, vaga := range vagas {
+		vagasIDs = append(vagasIDs, vaga.ID)
+	}
+
+	anexos, err := uc.anexoImagemRepo.FindByVagaIDs(ctx, vagasIDs)
+	if err != nil {
+		return nil, err
+	}
+	anexosPorVagaMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorVagaMap[*anexo.VagaID] = append(anexosPorVagaMap[*anexo.VagaID], anexo.URL)
+	}
 	var resp []VagaResponse
 	for _, vaga := range vagas {
 		clienteNome := ""
 		if vaga.Cliente != nil {
 			clienteNome = vaga.Cliente.Usuario.Nome
 		}
+		urls := anexosPorVagaMap[vaga.ID]
 		resp = append(resp, VagaResponse{
 			ID:          vaga.ID,
 			Titulo:      vaga.Titulo,
@@ -109,6 +124,7 @@ func(uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[st
 			Urgente:     vaga.Urgente,
 			Cliente:     clienteNome,
 			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
+			Anexos: urls,
 		})
 	}
 	return resp, nil
@@ -119,12 +135,26 @@ func(uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filt
 	if err != nil {
 		return nil, err
 	}
+	var vagasIDs []uint
+	for _, vaga := range vagas {
+		vagasIDs = append(vagasIDs, vaga.ID)
+	}
+
+	anexos, err := uc.anexoImagemRepo.FindByVagaIDs(ctx, vagasIDs)
+	if err != nil {
+		return nil, err
+	}
+	anexosPorVagaMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorVagaMap[*anexo.VagaID] = append(anexosPorVagaMap[*anexo.VagaID], anexo.URL)
+	}
 	var resp []VagaResponse
 	for _, vaga := range vagas {
 		clienteNome := ""
 		if vaga.Cliente != nil {
 			clienteNome = vaga.Cliente.Usuario.Nome
 		}
+		urls := anexosPorVagaMap[vaga.ID]
 		resp = append(resp, VagaResponse{
 			ID:          vaga.ID,
 			Titulo:      vaga.Titulo,
@@ -137,6 +167,7 @@ func(uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filt
 			Urgente:     vaga.Urgente,
 			Cliente:     clienteNome,
 			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
+			Anexos: urls,
 		})
 	}
 	return resp, nil
@@ -147,12 +178,26 @@ func(uc *VagaUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longit
 	if err != nil {
 		return nil, err
 	}
+	var vagasIDs []uint
+	for _, vaga := range vagas {
+		vagasIDs = append(vagasIDs, vaga.ID)
+	}
+
+	anexos, err := uc.anexoImagemRepo.FindByVagaIDs(ctx, vagasIDs)
+	if err != nil {
+		return nil, err
+	}
+	anexosPorVagaMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorVagaMap[*anexo.VagaID] = append(anexosPorVagaMap[*anexo.VagaID], anexo.URL)
+	}
 	var resp []VagaResponse
 	for _, vaga := range vagas {
 		clienteNome := ""
 		if vaga.Cliente != nil {
 			clienteNome = vaga.Cliente.Usuario.Nome
 		}
+		urls := anexosPorVagaMap[vaga.ID]
 		resp = append(resp, VagaResponse{
 			ID:          vaga.ID,
 			Titulo:      vaga.Titulo,
@@ -165,6 +210,7 @@ func(uc *VagaUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longit
 			Urgente:     vaga.Urgente,
 			Cliente:     clienteNome,
 			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
+			Anexos: urls,
 		})
 	}
 	return resp, nil

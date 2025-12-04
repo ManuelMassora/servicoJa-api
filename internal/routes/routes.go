@@ -92,4 +92,8 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 		avaliacao.GET("/cliente", middleware.HasRole("CLIENTE"), container.AvaliacaoH.ListarAvaliacoesPorCliente)
 		avaliacao.GET("prestador/:id", container.AvaliacaoH.ListarAvaliacoesPorPrestador)
 	}
+	galeria := server.Group("galeria", middleware.Auth())
+	{
+		galeria.POST("", middleware.HasRole("PRESTADOR"), container.GaleriaH.CriarGaleria)
+	}
 }

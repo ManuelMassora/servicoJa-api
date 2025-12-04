@@ -15,9 +15,9 @@ import (
 	// "github.com/markbates/goth/gothic"
 )
 
-type appConfig struct {
-	*config.Config
-}
+// type appConfig struct {
+// 	*config.Config
+// }
 
 func main() {
 	cfg, err := config.LoadConfig(".env")
@@ -46,8 +46,7 @@ func main() {
 	container := di.NewContainer(db, cfg)
 	routes.SetRoutes(server, container)
 
-	log.Printf("Servidor rodando na porta :%s", cfg.ServerPort)
-	if err := server.Run(":" + cfg.ServerPort); err != nil {
+	if err := server.Run(cfg.ServerHost + ":" + cfg.ServerPort); err != nil {
 		log.Fatalf("Erro ao iniciar o servidor: %v", err)
 	}
 }

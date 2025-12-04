@@ -4,7 +4,7 @@ import "context"
 
 type Galeria struct {
 	BaseModel
-	PrestadorID uint    `gorm:"not null;index"`
+	PrestadorID uint    `gorm:"not null;uniqueIndex:idx_galeria_prestador"`
 	Imagens     []Imagem `gorm:"foreignKey:GaleriaID"`
 }
 
@@ -22,4 +22,5 @@ type GaleriaRepo interface {
 	AddImage(ctx context.Context, imagem *Imagem) error
 	CountImages(ctx context.Context, galeriaID uint) (int64, error)
 	FindByGaleriaID(ctx context.Context, galeriaID uint) ([]Imagem, error)
+	FindByPrestadorIDs(ctx context.Context, prestadorIDs []uint) ([]Galeria, error)
 }

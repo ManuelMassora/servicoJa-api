@@ -44,6 +44,7 @@ type ResponseCatalogo struct {
 	Localizacao string   `json:"localizacao"`
 	Latitude    float64  `json:"latitude"`
 	Longitude   float64  `json:"longitude"`
+	Anexos      []string `json:"anexos"`
 }
 
 func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
@@ -118,8 +119,21 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 	if err != nil {
 		return nil, err
 	}
+	var catalogosID []uint
+	for _, catalogo := range catalogos {
+		catalogosID = append(catalogosID, catalogo.ID)
+	}
+	anexos, err := uc.anexoImagemRepo.FindByCatalogoIDs(ctx, catalogosID)
+	if err != nil {
+		return nil, err
+	}
+	anexosPorVagaMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorVagaMap[*anexo.CatalogoID] = append(anexosPorVagaMap[*anexo.CatalogoID], anexo.URL)
+	}
 	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
 	for _, catalogo := range catalogos {
+		urls := anexosPorVagaMap[catalogo.ID]
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
 			ID: catalogo.ID,
 			Nome: catalogo.Nome,
@@ -133,6 +147,7 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 			Localizacao: catalogo.Localizacao,
 			Latitude: catalogo.Latitude,
 			Longitude: catalogo.Longitude,
+			Anexos: urls,
 		})
 	}
 	return catalogoResponse, nil
@@ -143,8 +158,21 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uin
 	if err != nil {
 		return nil, err
 	}
+	var catalogosID []uint
+	for _, catalogo := range catalogos {
+		catalogosID = append(catalogosID, catalogo.ID)
+	}
+	anexos, err := uc.anexoImagemRepo.FindByCatalogoIDs(ctx, catalogosID)
+	if err != nil {
+		return nil, err
+	}
+	anexosPorVagaMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorVagaMap[*anexo.CatalogoID] = append(anexosPorVagaMap[*anexo.CatalogoID], anexo.URL)
+	}
 	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
 	for _, catalogo := range catalogos {
+		urls := anexosPorVagaMap[catalogo.ID]
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
 			ID: catalogo.ID,
 			Nome: catalogo.Nome,
@@ -158,6 +186,7 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uin
 			Localizacao: catalogo.Localizacao,
 			Latitude: catalogo.Latitude,
 			Longitude: catalogo.Longitude,
+			Anexos: urls,
 		})
 	}
 	return catalogoResponse, nil
@@ -168,8 +197,21 @@ func(uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, lo
 	if err != nil {
 		return nil, err
 	}
-	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
+	var catalogosID []uint
 	for _, catalogo := range catalogos {
+		catalogosID = append(catalogosID, catalogo.ID)
+	}
+	anexos, err := uc.anexoImagemRepo.FindByCatalogoIDs(ctx, catalogosID)
+	if err != nil {
+		return nil, err
+	}
+	anexosPorVagaMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorVagaMap[*anexo.CatalogoID] = append(anexosPorVagaMap[*anexo.CatalogoID], anexo.URL)
+	}
+	var catalogoResponse []ResponseCatalogo
+	for _, catalogo := range catalogos {
+		urls := anexosPorVagaMap[catalogo.ID]
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
 			ID: catalogo.ID,
 			Nome: catalogo.Nome,
@@ -183,6 +225,7 @@ func(uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, lo
 			Localizacao: catalogo.Localizacao,
 			Latitude: catalogo.Latitude,
 			Longitude: catalogo.Longitude,
+			Anexos: urls,
 		})
 	}
 	return catalogoResponse, nil

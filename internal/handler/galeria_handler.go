@@ -12,6 +12,7 @@ import (
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
 	"github.com/ManuelMassora/servicoJa-api/pkg"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -26,7 +27,7 @@ func NewGaleriaHandler(uc *usecases.GaleriaUseCase, uploader *services.SupabaseU
 
 func (h *GaleriaHandler) CriarGaleria(c *gin.Context) {
 	var input dto.GaleriaInput
-	if err := c.ShouldBind(&input); err != nil {
+	if err := c.ShouldBindWith(&input, binding.FormMultipart); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -38,8 +39,19 @@ func (h *GaleriaHandler) CriarGaleria(c *gin.Context) {
 	}
 
 	files := form.File["imagens"]
-	if len(files) > 3 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Limite de 3 imagens por galeria excedido."})
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Nenhuma imagem foi enviada"})
+		return
+	}
+
+	if len(files) > 4 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Limite de 4 imagens por galeria excedido."})
+		return
+	}
+
+	prestadorID, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -78,18 +90,12 @@ func (h *GaleriaHandler) CriarGaleria(c *gin.Context) {
 	}
 	close(resCh)
 
-	tmp := make([]dto.ImagemInput, len(files))
+	imagens := make([]string, len(files))
 	for r := range resCh {
-		tmp[r.idx] = dto.ImagemInput{URL: r.url}
+		imagens[r.idx] = r.url
 	}
 
-	input.Imagens = tmp
-
-	prestadorID, err := getUsuarioID(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	input.Imagens = imagens
 
 	galeria, err := h.uc.AddImagesToGaleria(c.Request.Context(), prestadorID, input)
 	if err != nil {

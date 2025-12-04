@@ -11,6 +11,7 @@ import (
 type Config struct {
 	DatabaseDSN        string
 	ServerPort         string
+	ServerHost         string
 	SupabaseURL        string
 	SupabaseKey        string
 }
@@ -28,6 +29,7 @@ func LoadConfig(envPath string) (*Config, error) {
 	}
 
 	serverPort := os.Getenv("SERVER_PORT")
+	serverHost := os.Getenv("SERVER_HOST")
 	supabaseURL := os.Getenv("SUPABASE_URL")
 	supabaseKey := os.Getenv("SUPABASE_SERVICE_KEY")
 
@@ -42,6 +44,7 @@ func LoadConfig(envPath string) (*Config, error) {
 	cfg := &Config{
 		DatabaseDSN:        dbDSN,
 		ServerPort:         serverPort,
+		ServerHost:         serverHost,
 		SupabaseURL:        supabaseURL,
 		SupabaseKey:        supabaseKey,
 	}

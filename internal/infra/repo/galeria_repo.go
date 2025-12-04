@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"gorm.io/gorm"
@@ -23,7 +24,7 @@ func (r *GaleriaRepo) Create(ctx context.Context, galeria *model.Galeria) (*mode
 }
 
 func (r *GaleriaRepo) AddImage(ctx context.Context, imagem *model.Imagem) error {
-	return r.db.WithContext(ctx).Create(imagem).Error
+	return r.db.WithContext(ctx).Create(&imagem).Error
 }
 
 func (r *GaleriaRepo) FindByID(ctx context.Context, id uint) (*model.Galeria, error) {
@@ -36,11 +37,14 @@ func (r *GaleriaRepo) FindByID(ctx context.Context, id uint) (*model.Galeria, er
 }
 
 func (r *GaleriaRepo) FindByPrestadorID(ctx context.Context, prestadorID uint) (*model.Galeria, error) {
-	var galeria model.Galeria
-	err := r.db.WithContext(ctx).
-		Where("prestador_id = ?", prestadorID).
-		Find(&galeria).Error
-	return &galeria, err
+    var galeria model.Galeria
+    if err := r.db.WithContext(ctx).Where("prestador_id = ?", prestadorID).First(&galeria).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, nil
+        }
+        return nil, err
+    }
+    return &galeria, nil
 }
 
 func (r *GaleriaRepo) Delete(ctx context.Context, id uint) error {
@@ -57,4 +61,13 @@ func (r *GaleriaRepo) FindByGaleriaID(ctx context.Context, galeriaID uint) ([]mo
 	var imagens []model.Imagem
 	err := r.db.WithContext(ctx).Where("galeria_id = ?", galeriaID).Find(&imagens).Error
 	return imagens, err
+}
+
+func(r *GaleriaRepo) FindByPrestadorIDs(ctx context.Context, prestadorIDs []uint) ([]model.Galeria, error) {
+	var galerias []model.Galeria
+	err := r.db.WithContext(ctx).
+		Preload("Imagens").
+		Where("prestador_id IN ?", prestadorIDs).
+		Find(&galerias).Error
+	return galerias, err
 }

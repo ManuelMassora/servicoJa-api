@@ -17,8 +17,9 @@ func TestUsuarioUseCase_CriarAdmin_Sucesso(t *testing.T) {
     usuarioRepo := new(mocks.MockUsuarioRepo)
     clienteRepo := new(mocks.MockClienteRepo)
     prestadorRepo := new(mocks.MockPrestadorRepo)
+	galeriaRepo := new(mocks.GaleriaRepoMock)
 
-    uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo)
+    uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo, galeriaRepo)
 
     ctx := context.Background()
     req := usecases.UsuarioRequest{
@@ -45,8 +46,9 @@ func TestUsuarioUseCase_CriarAdmin_TelefoneJaExiste(t *testing.T) {
 	usuarioRepo := new(mocks.MockUsuarioRepo)
 	clienteRepo := new(mocks.MockClienteRepo)
 	prestadorRepo := new(mocks.MockPrestadorRepo)
+	galeriaRepo := new(mocks.GaleriaRepoMock)
 
-	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo)
+	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo, galeriaRepo)
 
 	ctx := context.Background()
 	req := usecases.UsuarioRequest{
@@ -67,8 +69,9 @@ func TestUsuarioUseCase_CriarCliente_Sucesso(t *testing.T) {
 	usuarioRepo := new(mocks.MockUsuarioRepo)
 	clienteRepo := new(mocks.MockClienteRepo)
 	prestadorRepo := new(mocks.MockPrestadorRepo)
+	galeriaRepo := new(mocks.GaleriaRepoMock)
 
-	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo)
+	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo, galeriaRepo)
 
 	ctx := context.Background()
 	req := usecases.UsuarioRequest{
@@ -91,8 +94,9 @@ func TestUsuarioUseCase_CriarPrestador_Sucesso(t *testing.T) {
 	usuarioRepo := new(mocks.MockUsuarioRepo)
 	clienteRepo := new(mocks.MockClienteRepo)
 	prestadorRepo := new(mocks.MockPrestadorRepo)
+	galeriaRepo := new(mocks.GaleriaRepoMock)
 
-	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo)
+	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo, galeriaRepo)
 
 	ctx := context.Background()
 	req := usecases.PrestadorRequest{
@@ -116,8 +120,9 @@ func TestUsuarioUseCase_ListarTodosUsuarios(t *testing.T) {
 	usuarioRepo := new(mocks.MockUsuarioRepo)
 	clienteRepo := new(mocks.MockClienteRepo)
 	prestadorRepo := new(mocks.MockPrestadorRepo)
+	galeriaRepo := new(mocks.GaleriaRepoMock)
 
-	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo)
+	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo, galeriaRepo)
 
 	ctx := context.Background()
 	usuariosMock := []model.Usuario{
@@ -141,8 +146,9 @@ func TestUsuarioUseCase_ListarPrestadores(t *testing.T) {
 	usuarioRepo := new(mocks.MockUsuarioRepo)
 	clienteRepo := new(mocks.MockClienteRepo)
 	prestadorRepo := new(mocks.MockPrestadorRepo)
+	galeriaRepo := new(mocks.GaleriaRepoMock)
 
-	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo)
+	uc := usecases.NewUsuarioUseCase(usuarioRepo, clienteRepo, prestadorRepo, galeriaRepo)
 
 	ctx := context.Background()
 	prestadoresMock := []model.Prestador{
@@ -167,7 +173,7 @@ func TestUsuarioUseCase_ListarPrestadores(t *testing.T) {
 
 func TestUsuarioUseCase_seTelefoneExiste_NaoExiste(t *testing.T) {
     usuarioRepo := new(mocks.MockUsuarioRepo)
-    uc := usecases.NewUsuarioUseCase(usuarioRepo, nil, nil) // use o construtor!
+    uc := usecases.NewUsuarioUseCase(usuarioRepo, nil, nil, nil) // use o construtor!
 
     ctx := context.Background()
     usuarioRepo.On("BuscarPorTelefone", ctx, "999").Return((*model.Usuario)(nil), gorm.ErrRecordNotFound)
@@ -180,7 +186,7 @@ func TestUsuarioUseCase_seTelefoneExiste_NaoExiste(t *testing.T) {
 
 func TestUsuarioUseCase_seTelefoneExiste_JaExiste(t *testing.T) {
     usuarioRepo := new(mocks.MockUsuarioRepo)
-    uc := usecases.NewUsuarioUseCase(usuarioRepo, nil, nil)
+    uc := usecases.NewUsuarioUseCase(usuarioRepo, nil, nil, nil)
 
     ctx := context.Background()
     usuarioRepo.On("BuscarPorTelefone", ctx, "888").Return(&model.Usuario{Telefone: "888"}, nil)
@@ -194,7 +200,7 @@ func TestUsuarioUseCase_seTelefoneExiste_JaExiste(t *testing.T) {
 
 func TestUsuarioUseCase_seTelefoneExiste_ErroInterno(t *testing.T) {
     usuarioRepo := new(mocks.MockUsuarioRepo)
-    uc := usecases.NewUsuarioUseCase(usuarioRepo, nil, nil)
+    uc := usecases.NewUsuarioUseCase(usuarioRepo, nil, nil, nil)
 
     ctx := context.Background()
     expectedErr := errors.New("db error")
