@@ -29,6 +29,8 @@ type ServicoResponse struct {
 	DataHoraFim     time.Time  	`json:"data_fim,omitempty"`
 	Cliente    		uint      	`json:"cliente"`
 	Prestador  		uint      	`json:"prestador"`
+	Catalogo 		string		`json:"catalogo,omitempty"`
+	Descricao		string		`json:"descricao"`
 }
 
 func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo) *ServicoUseCase {
@@ -120,19 +122,27 @@ func (uc *ServicoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, 
 	}
 	var resp []ServicoResponse
 	for _, s := range servicos {
+		var descricao string
+		if s.IDAgendamento != nil && s.Agendamento != nil {
+			descricao = s.Agendamento.Detalhe
+		} else if s.IDVaga != nil && s.Vaga != nil {
+			descricao = s.Vaga.Descricao
+		}
+
 		resp = append(resp, ServicoResponse{
-			ID:            s.ID,
-			Localizacao:   s.Localizacao,
-			Latitude:      s.Latitude,
-			Longitude:     s.Longitude,
-			Preco:         s.Preco,
-			Status:        string(s.Status),
-			IDAgendamento: s.IDAgendamento,
-			IDVaga:        s.IDVaga,
+			ID:             s.ID,
+			Localizacao:    s.Localizacao,
+			Latitude:       s.Latitude,
+			Longitude:      s.Longitude,
+			Preco:          s.Preco,
+			Status:         string(s.Status),
+			IDAgendamento:  s.IDAgendamento,
+			IDVaga:         s.IDVaga,
 			DataHoraInicio: s.DataHoraInicio,
 			DataHoraFim:    s.DataHoraFim,
-			Cliente:        s.IDCliente,
-			Prestador:      s.IDPrestador,
+			Cliente:         s.IDCliente,
+			Prestador:       s.IDPrestador,
+			Descricao:       descricao,
 		})
 	}
 	return resp, nil
@@ -148,19 +158,30 @@ func (uc *ServicoUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint
 	}
 	var resp []ServicoResponse
 	for _, s := range servicos {
+		var descricao string
+		var catalogo string
+		if s.IDAgendamento != nil && s.Agendamento != nil {
+			descricao = s.Agendamento.Detalhe
+			catalogo = s.Agendamento.Catalogo.Nome
+		} else if s.IDVaga != nil && s.Vaga != nil {
+			descricao = s.Vaga.Descricao
+		}
+
 		resp = append(resp, ServicoResponse{
-			ID:            s.ID,
-			Localizacao:   s.Localizacao,
-			Latitude:      s.Latitude,
-			Longitude:     s.Longitude,
-			Preco:         s.Preco,
-			Status:        string(s.Status),
-			IDAgendamento: s.IDAgendamento,
-			IDVaga:        s.IDVaga,
+			ID:             s.ID,
+			Localizacao:    s.Localizacao,
+			Latitude:       s.Latitude,
+			Longitude:      s.Longitude,
+			Preco:          s.Preco,
+			Status:         string(s.Status),
+			IDAgendamento:  s.IDAgendamento,
+			IDVaga:         s.IDVaga,
 			DataHoraInicio: s.DataHoraInicio,
 			DataHoraFim:    s.DataHoraFim,
 			Cliente:        s.IDCliente,
 			Prestador:      s.IDPrestador,
+			Descricao:      descricao,
+			Catalogo: 		catalogo,
 		})
 	}
 	return resp, nil
@@ -176,19 +197,27 @@ func (uc *ServicoUseCase) ListarPorLocalizacao(ctx context.Context, userID uint,
 	}
 	var resp []ServicoResponse
 	for _, s := range servicos {
+		var descricao string
+		if s.IDAgendamento != nil && s.Agendamento != nil {
+			descricao = s.Agendamento.Detalhe
+		} else if s.IDVaga != nil && s.Vaga != nil {
+			descricao = s.Vaga.Descricao
+		}
+
 		resp = append(resp, ServicoResponse{
-			ID:            s.ID,
-			Localizacao:   s.Localizacao,
-			Latitude:      s.Latitude,
-			Longitude:     s.Longitude,
-			Preco:         s.Preco,
-			Status:        string(s.Status),
-			IDAgendamento: s.IDAgendamento,
-			IDVaga:        s.IDVaga,
+			ID:             s.ID,
+			Localizacao:    s.Localizacao,
+			Latitude:       s.Latitude,
+			Longitude:      s.Longitude,
+			Preco:          s.Preco,
+			Status:         string(s.Status),
+			IDAgendamento:  s.IDAgendamento,
+			IDVaga:         s.IDVaga,
 			DataHoraInicio: s.DataHoraInicio,
 			DataHoraFim:    s.DataHoraFim,
-			Cliente:        s.IDCliente,
-			Prestador:      s.IDPrestador,
+			Cliente:         s.IDCliente,
+			Prestador:       s.IDPrestador,
+			Descricao:       descricao,
 		})
 	}
 	return resp, nil

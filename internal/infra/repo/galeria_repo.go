@@ -38,7 +38,9 @@ func (r *GaleriaRepo) FindByID(ctx context.Context, id uint) (*model.Galeria, er
 
 func (r *GaleriaRepo) FindByPrestadorID(ctx context.Context, prestadorID uint) (*model.Galeria, error) {
     var galeria model.Galeria
-    if err := r.db.WithContext(ctx).Where("prestador_id = ?", prestadorID).First(&galeria).Error; err != nil {
+    if err := r.db.WithContext(ctx).
+	Preload("Imagens").
+	Where("prestador_id = ?", prestadorID).First(&galeria).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             return nil, nil
         }

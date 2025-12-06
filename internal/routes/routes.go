@@ -27,6 +27,8 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 		usuario.GET("", container.UsuarioH.ListarTodosUsuarios)
 		usuario.GET("/prestador", container.UsuarioH.ListarPrestadores)
 		usuario.GET("/prestador/location", container.UsuarioH.ListarPrestadoresPorLocalizacao)
+		usuario.GET("/prestador/:id", container.UsuarioH.BuscarPrestadorPorID)
+		usuario.PATCH("/prestador", middleware.HasRole("PRESTADOR"), container.UsuarioH.EditarPrestador)
 	}
 
 	categoria := server.Group("categoria", middleware.Auth())
@@ -95,5 +97,11 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 	galeria := server.Group("galeria", middleware.Auth())
 	{
 		galeria.POST("", middleware.HasRole("PRESTADOR"), container.GaleriaH.CriarGaleria)
+	}
+	categoriaPrestador := server.Group("categoria-prestador", middleware.Auth())
+	{
+		categoriaPrestador.POST("", middleware.HasRole("ADMIN"), container.CategoriaPrestadorH.Criar)
+		categoriaPrestador.PATCH(":id", middleware.HasRole("ADMIN"), container.CategoriaPrestadorH.Editar)
+		categoriaPrestador.GET("", container.CategoriaPrestadorH.Listar)
 	}
 }

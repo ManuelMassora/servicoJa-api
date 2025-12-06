@@ -16,6 +16,14 @@ func (m *MockPrestadorRepo) Criar(ctx context.Context, prestador *model.Prestado
 	return args.Error(0)
 }
 
+func (m *MockPrestadorRepo) Editar(ctx context.Context, id uint, campos map[string]interface{}) (*model.Prestador,error) {
+	args := m.Called(ctx, id, campos)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Prestador), args.Error(1)
+}
+
 func (m *MockPrestadorRepo) AtualizarStatus(ctx context.Context, id uint, disponivel bool) error {
 	args := m.Called(ctx, id, disponivel)
 	return args.Error(0)

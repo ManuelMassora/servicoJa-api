@@ -25,6 +25,7 @@ type Container struct {
 	AvaliacaoRepo *repo.AvaliacaoRepo
 	AnexoImagemRepo *repo.AnexoImagemRepo
 	GaleriaRepo *repo.GaleriaRepo
+	CategoriaPrestadorRepo *repo.CategoriaPrestadorRepo
 
 	//Services
 	AuthService *services.AuthUSer
@@ -43,6 +44,7 @@ type Container struct {
 	AvaliacaoUC *usecases.AvaliacaoUseCase
 	AnexoImagemUC *usecases.AnexoImagemUseCase
 	GaleriaUC *usecases.GaleriaUseCase
+	CategoriaPrestadorUC *usecases.CategoriaPrestadorUsecase
 		
 	//Handler
 	CategoriaH	*handler.CategoriaHandler
@@ -57,6 +59,7 @@ type Container struct {
 	AvaliacaoH *handler.AvaliacaoHandler
 	// AnexoImagemH *handler.AnexoImagemHandler
 	GaleriaH *handler.GaleriaHandler
+	CategoriaPrestadorH *handler.CategoriaPrestadorHandler
 }
 
 func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
@@ -76,6 +79,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.AvaliacaoRepo = repo.NewAvaliacaoRepository(db).(*repo.AvaliacaoRepo)
 	c.AnexoImagemRepo = repo.NewAnexoImagemRepo(db).(*repo.AnexoImagemRepo)
 	c.GaleriaRepo = repo.NewGaleriaRepo(db).(*repo.GaleriaRepo)
+	c.CategoriaPrestadorRepo = repo.NewCategoriaPrestadorRepo(db).(*repo.CategoriaPrestadorRepo)
 
 
 	//Init Services
@@ -93,6 +97,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.NotificacaoUC = usecases.NewNotificacaoUseCase(c.NotificacaoRepo, c.UsuarioRepo)
 	c.AvaliacaoUC = usecases.NewAvaliacaoUseCase(c.AvaliacaoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
 	c.GaleriaUC = usecases.NewGaleriaUseCase(c.GaleriaRepo)
+	c.CategoriaPrestadorUC = usecases.NewCategoriaPrestadorUsecase(c.CategoriaPrestadorRepo)
 
 	//Init Handler
 	c.CategoriaH = handler.NewCategoriaHandler(*c.CategoriaUC)
@@ -106,5 +111,6 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.NotificacaoH = handler.NewNotificacaoHandler(*c.NotificacaoUC)
 	c.AvaliacaoH = handler.NewAvaliacaoHandler(*c.AvaliacaoUC)
 	c.GaleriaH = handler.NewGaleriaHandler(c.GaleriaUC, c.Uploader)
+	c.CategoriaPrestadorH = handler.NewCategoriaPrestadorHandler(*c.CategoriaPrestadorUC)
 	return c
 }

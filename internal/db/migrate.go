@@ -76,6 +76,7 @@ func createEnums(db *gorm.DB) error {
 func autoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&model.RolePermissao{},
+		&model.CategoriaPrestador{},
 		&model.Usuario{},
 		&model.Cliente{},
 		&model.Prestador{},

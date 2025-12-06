@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"gorm.io/gorm"
@@ -165,6 +166,25 @@ func (r *PrestadorRepository) Criar(ctx context.Context, prestador *model.Presta
 	return r.db.WithContext(ctx).Create(prestador).Error
 }
 
+func (r *PrestadorRepository) Editar(ctx context.Context, id uint, campos map[string]interface{}) (*model.Prestador, error) {
+	var prestador model.Prestador
+	err := r.db.WithContext(ctx).
+		Model(&model.Prestador{}).
+		Where("id_usuario = ?", id).
+		Updates(campos).Error
+	if err != nil {
+		return nil, err
+	}
+	err = r.db.WithContext(ctx).
+		Preload("Usuario").
+		Where("id_usuario", id).
+		First(&prestador).Error
+	if err != nil {
+		return nil, err
+	}
+	return &prestador, nil
+}
+
 func (r *PrestadorRepository) AtualizarStatus(ctx context.Context, id uint, disponivel bool) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Prestador{}).
@@ -176,7 +196,8 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id uint) (*model.
 	var prestador model.Prestador
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
-		Where("usuario_id", id).
+		Preload("CategoriaPrestador").
+		Where("id_usuario", id).
 		First(&prestador, id).Error
 	if err != nil {
 		return nil, err
@@ -186,12 +207,18 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id uint) (*model.
 
 func (r *PrestadorRepository) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
 	var prestadores []model.Prestador
-	query := r.db.WithContext(ctx).Preload("Usuario")
+	query := r.db.WithContext(ctx).Preload("Usuario").Preload("CategoriaPrestador")
 	for field, value := range filters {
-		if strVal, ok := value.(string); ok {
-			query = query.Where(field+" LIKE ?", "%"+strVal+"%")
+		switch v := value.(type) {
+		case string:
+			if num, err := strconv.Atoi(v); err == nil {
+				query = query.Where(field+" = ?", num)
+			} else {
+				query = query.Where(field+" LIKE ?", "%"+v+"%")
+			}
 		}
 	}
+
 	if statusDisponivel != nil {
 		if boolVal, ok := statusDisponivel.(bool); ok {
 			query = query.Where("status_disponivel = ?", boolVal)
@@ -225,12 +252,23 @@ func (r *PrestadorRepository) FindByLocation(ctx context.Context, latitude, long
 	)
 
 	query := r.db.Select(fmt.Sprintf("*, (%s) AS distance", haversine)).
-		Where(fmt.Sprintf("(%s) < ?", haversine), radius)
+		Where(fmt.Sprintf("(%s) < ?", haversine), radius).
+		Preload("Usuario").Preload("CategoriaPrestador")
 
-	for key, value := range filters {
-		query = query.Where(fmt.Sprintf("%s LIKE ?", key), fmt.Sprintf("%%%v%%", value))
+	for field, value := range filters {
+		switch v := value.(type) {
+		case string:
+			if num, err := strconv.Atoi(v); err == nil {
+				query = query.Where(field+" = ?", num)
+			} else {
+				query = query.Where(field+" LIKE ?", "%"+v+"%")
+			}
+		}
 	}
-
+	if categoryID, ok := filters["categoria_prestador_id"].(uint); ok && categoryID > 0 {
+		query = query.Where("categoria_prestador_id = ?", categoryID)
+		delete(filters, "categoria_prestador_id") // Remove to avoid reprocessing
+	}
 	if orderBy != "" {
 		if orderDir == "" {
 			orderDir = "asc"

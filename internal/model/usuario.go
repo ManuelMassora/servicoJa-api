@@ -57,11 +57,13 @@ type Prestador struct {
 	Longitude   		float64  	`gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
 	StatusDisponivel 	bool    	`json:"status_disponivel"`
 	Reputacao       	float64  	`json:"reputacao"`
-	Galerias          []Galeria `gorm:"foreignKey:PrestadorID"`
+	CategoriaPrestadorID 	*uint    	`json:"categoria_prestador_id"`
+	CategoriaPrestador   	*CategoriaPrestador 	`gorm:"foreignKey:CategoriaPrestadorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"categoria_prestador,omitempty"`
 }
 
 type PrestadorRepo interface {
 	Criar(ctx context.Context, prestador *Prestador) error
+	Editar(ctx context.Context, id uint, campos map[string]interface{}) (*Prestador,error)
 	AtualizarStatus(ctx context.Context, id uint, disponivel bool) error
 	BuscarPorID(ctx context.Context, id uint) (*Prestador, error)
 	Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)

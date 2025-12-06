@@ -63,6 +63,7 @@ type PrestadorResponse struct {
 	Disponivel  bool    `json:"disponivel"`
 	ImagemURL   string  `json:"imagem_url"`
 	Galeria	 	[]string `json:"galeria"`
+	Categoria  string `json:"categoria,omitempty"`
 }
 
 func (uc *UsuarioUseCase) CriarAdmin(ctx context.Context, request UsuarioRequest) error{
@@ -104,6 +105,56 @@ func (uc *UsuarioUseCase) CriarPrestador(ctx context.Context, request PrestadorR
 		return err
 	}
 	return uc.prestadorRepo.Criar(ctx, prestador)
+}
+
+func (uc *UsuarioUseCase) EditarPrestador(ctx context.Context, userId uint, campos map[string]interface{}) (*PrestadorResponse, error) {
+	prestador, err := uc.prestadorRepo.Editar(ctx, userId, campos)
+	if err != nil {
+		return nil, err
+	}
+	return &PrestadorResponse{
+		ID:          prestador.IDUsuario,
+		Nome:        prestador.Nome,
+		Telefone:    prestador.Telefone,
+		Localizacao: prestador.Localizacao,
+		Latitude:    prestador.Latitude,
+		Longitude:   prestador.Longitude,
+		Disponivel:  prestador.StatusDisponivel,
+		ImagemURL:   prestador.ImagemURL,
+	}, nil
+}
+
+func (uc *UsuarioUseCase) BuscarPrestador(ctx context.Context, id uint) (*PrestadorResponse, error) {
+	prestador, err := uc.prestadorRepo.BuscarPorID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	var prestadorCategoria string
+	if prestador.CategoriaPrestador != nil {
+		prestadorCategoria = prestador.CategoriaPrestador.Nome
+	}
+	galeria,  err := uc.galeriaRepo.FindByPrestadorID(ctx, prestador.IDUsuario)
+	if err != nil {
+		return nil, err
+	}
+	var imagens []string		
+	if galeria != nil {
+		for _, imagem := range galeria.Imagens {
+			imagens = append(imagens, imagem.URL)
+		}
+	}
+	return &PrestadorResponse{
+		ID:          prestador.IDUsuario,
+		Nome:        prestador.Nome,
+		Telefone:    prestador.Telefone,
+		Localizacao: prestador.Localizacao,
+		Latitude:    prestador.Latitude,
+		Longitude:   prestador.Longitude,
+		Disponivel:  prestador.StatusDisponivel,
+		ImagemURL:   prestador.ImagemURL,
+		Galeria:     imagens,
+		Categoria:  prestadorCategoria,
+	}, nil
 }
 
 func(uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]UsuarioResponse, error) {
@@ -164,6 +215,10 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
 		imagensURLs := galeriaPrestadorMap[p.IDUsuario]
+		var prestadorCategoria string
+		if p.CategoriaPrestador != nil {
+			prestadorCategoria = p.CategoriaPrestador.Nome
+		}
 		response = append(response, PrestadorResponse{
 			ID:          p.IDUsuario,
 			Nome:        p.Nome,
@@ -174,6 +229,7 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 			Disponivel:  p.StatusDisponivel,
 			ImagemURL:   p.ImagemURL,
 			Galeria:     imagensURLs,
+			Categoria:  prestadorCategoria,
 		})
 	}
 	return response, nil
@@ -203,6 +259,10 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 	response := make([]PrestadorResponse, 0, len(prestadores))
 	for _, p := range prestadores {
 		imagensURLs := galeriaPrestadorMap[p.IDUsuario]
+		var prestadorCategoria string
+		if p.CategoriaPrestador != nil {
+			prestadorCategoria = p.CategoriaPrestador.Nome
+		}
 		response = append(response, PrestadorResponse{
 			ID:          p.IDUsuario,
 			Nome:        p.Nome,
@@ -213,6 +273,7 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 			Disponivel:  p.StatusDisponivel,
 			ImagemURL:   p.ImagemURL,
 			Galeria:     imagensURLs,
+			Categoria:  prestadorCategoria,
 		})
 	}
 	return response, nil

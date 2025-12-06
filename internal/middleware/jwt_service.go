@@ -29,7 +29,7 @@ func (s *JwtService) GenateToken(id uint, role string) (string, error) {
 		Sum:  id,
 		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 6)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    s.issure,
 		},

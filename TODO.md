@@ -1,5 +1,6 @@
-1. Implementar Catalogos e Prestadores em destaque
-2. Recolha de metadados pra Criar algoritimo de recomendacao
-2. pacotes gratis com limite e pago
-3. mensageria - push no frontend
-3. fazer o passo 2 com API-Pay
+1. Editar Catalogo, Vaga, Perfil Cliente
+2. Implementar Catalogos e Prestadores em destaque
+3. Recolha de metadados pra Criar algoritimo de recomendacao
+4. pacotes gratis com limite e pago
+5. mensageria - push no frontend
+6. fazer o passo 2 com API-Pay

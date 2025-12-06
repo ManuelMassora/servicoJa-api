@@ -16,7 +16,6 @@ func NewServicoHandler(uc usecases.ServicoUseCase) *ServicoHandler {
 	return &ServicoHandler{uc: uc}
 }
 
-// Handler para finalizar um serviço.
 func (h *ServicoHandler) FinalizarServico(c *gin.Context) {
 	idServico, err := getServicoID(c) // Assumindo que 'getServicoID' extrai o ID do parâmetro da URL
 	if err != nil {
@@ -43,7 +42,6 @@ func (h *ServicoHandler) FinalizarServico(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Serviço finalizado com sucesso"})
 }
 
-// Handler para cancelar um serviço.
 func (h *ServicoHandler) CancelarServico(c *gin.Context) {
 	idServico, err := getServicoID(c) // Assumindo que 'getServicoID' extrai o ID do parâmetro da URL
 	if err != nil {
@@ -72,7 +70,6 @@ func (h *ServicoHandler) CancelarServico(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Serviço cancelado com sucesso"})
 }
 
-// Handler para listar serviços por cliente.
 func (h *ServicoHandler) ListarPorCliente(c *gin.Context) {
 	idUsuario, err := getUsuarioID(c)
 	if err != nil {
@@ -151,7 +148,6 @@ func (h *ServicoHandler) ListarPorCliente(c *gin.Context) {
 	})
 }
 
-// Handler para listar serviços por prestador.
 func (h *ServicoHandler) ListarPorPrestador(c *gin.Context) {
 	idUsuario, err := getUsuarioID(c)
 	if err != nil {
@@ -227,14 +223,6 @@ func (h *ServicoHandler) ListarPorPrestador(c *gin.Context) {
 	})
 }
 
-// Função de exemplo para getUsuarioID (supondo que esteja no mesmo pacote ou acessível)
-// func getUsuarioID(c *gin.Context) (uint64, error) {
-// 	// Implementação real para extrair o ID do usuário do contexto do gin (ex: de um JWT)
-// 	// ...
-// 	return 1, nil // Exemplo
-// }
-
-// Função de exemplo para getServicoID (supondo que esteja no mesmo pacote ou acessível)
 func getServicoID(c *gin.Context) (uint, error) {
 	idStr := c.Param("id") // Assume que o ID é passado como um parâmetro de rota chamado "id"
 	id, err := strconv.ParseUint(idStr, 10, 32)

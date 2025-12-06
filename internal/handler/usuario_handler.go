@@ -135,6 +135,82 @@ func (h *UsuarioHandler) CriarPrestador(c *gin.Context) {
 	c.JSON(201, nil)
 }
 
+func (h *UsuarioHandler) EditarPrestador(c *gin.Context) {
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuário não autenticado"})
+		return
+	}
+
+	// Vai funcionar com multipart/form-data (texto + arquivo)
+	if err := c.Request.ParseMultipartForm(20 << 20); err != nil { // 20MB
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao processar multipart/form-data: " + err.Error()})
+		return
+	}
+
+	// Pegando valores textuais (nome, email, telefone, etc)
+	campos := make(map[string]interface{})
+	for key, values := range c.Request.MultipartForm.Value {
+		if len(values) > 0 {
+			campos[key] = values[0] // Só pega o primeiro
+		}
+	}
+
+	// Se o campo "imagem" existir, então tratamos
+	file, err := c.FormFile("imagem")
+	if err != nil && err != http.ErrMissingFile {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Falha ao obter arquivo de imagem"})
+		return
+	}
+
+	if file != nil {
+		compressedBuf, format, err := pkg.CompressImage(file, 100)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"erro": "falha ao processar imagem"})
+			return
+		}
+
+		fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
+		contentType := mime.TypeByExtension("." + format)
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		_, fileName, err = h.uploader.UploadFromReader(c.Request.Context(), bytes.NewReader(compressedBuf.Bytes()), fileName, contentType)
+		if err != nil {
+			c.JSON(500, gin.H{"erro": "erro ao fazer upload da imagem: " + err.Error()})
+			return
+		}
+
+		// ADD AO CAMPOS: atualiza imagem_url
+		campos["imagem_url"] = h.uploader.GetPublicURL("serviceja-image", fileName)
+	}
+
+	prestador, err := h.uc.EditarPrestador(c.Request.Context(), idUsuario, campos)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, prestador)
+}
+
+func (h *UsuarioHandler) BuscarPrestadorPorID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{"erro": "ID inválido"})
+		return
+	}
+
+	prestador, err := h.uc.BuscarPrestador(c.Request.Context(), uint(id))
+	if err != nil {
+		c.JSON(404, gin.H{"erro": "Prestador não encontrado: "})
+		return
+	}
+
+	c.JSON(200, prestador)
+}
+
 func (h *UsuarioHandler) ListarTodosUsuarios(c *gin.Context) {
 	filters := make(map[string]interface{})
 

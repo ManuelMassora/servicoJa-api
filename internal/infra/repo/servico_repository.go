@@ -30,6 +30,7 @@ func (r *ServicoRepository) BuscarPorID(ctx context.Context, id uint) (*model.Se
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
 		Preload("Vaga").
 		First(&servico, id).Error
 	if err != nil {
@@ -51,6 +52,7 @@ func (r *ServicoRepository) ListarPorCliente(ctx context.Context, idCliente uint
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
 		Preload("Vaga").
 		Where("id_cliente = ?", idCliente)
 
@@ -94,6 +96,7 @@ func (r *ServicoRepository) ListarPorPrestador(ctx context.Context, IDPrestador 
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
 		Preload("Vaga").
 		Where("id_prestador =?", IDPrestador)
 
@@ -145,6 +148,7 @@ func (r *ServicoRepository) FindByLocation(ctx context.Context, userID uint, lat
 		Preload("Cliente").
 		Preload("Prestador").
 		Preload("Agendamento").
+		Preload("Agendamento.Catalogo").
 		Preload("Vaga")
 
     for key, value := range filters {
