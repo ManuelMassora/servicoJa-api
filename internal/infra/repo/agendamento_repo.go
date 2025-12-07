@@ -114,6 +114,38 @@ func (r *AgendamentoRepo) ListarPorClienteID(ctx context.Context, clienteID uint
 	return agendamentos, nil
 }
 
+func (r *AgendamentoRepo) ListarPorPrestadorID(ctx context.Context, prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Agendamento, error) {
+	var agendamentos []model.Agendamento
+	query := r.db.Preload("Cliente").
+		Preload("Catalogo").
+		Preload("Catalogo.Prestador").
+		Model(&model.Agendamento{}).
+		Joins("LEFT JOIN catalogos ON agendamentos.id_catalogo = catalogos.id").
+		Where("catalogos.id_prestador = ?", prestadorID)
+
+	for key, value := range filters {
+		query = query.Where(key+" LIKE ?", "%"+value.(string)+"%")
+	}
+
+	if orderBy != "" {
+		if orderDir == "" {
+			orderDir = "asc"
+		}
+		query = query.Order(orderBy + " " + orderDir)
+	}
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Find(&agendamentos).Error; err != nil {
+		return nil, err
+	}
+	return agendamentos, nil
+}
+
 func (r *AgendamentoRepo) ListarPorCatalogID(ctx context.Context, catalogoID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Agendamento, error) {
 	var agendamentos []model.Agendamento
 	query := r.db.Preload("Cliente").

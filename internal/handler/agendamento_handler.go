@@ -369,6 +369,82 @@ func (h *AgendamentoHandler) ListarPorClienteID(c *gin.Context) {
 	})
 }
 
+func (h *AgendamentoHandler) ListarPorPrestadorID(c *gin.Context) {
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	filters := make(map[string]interface{})
+
+	for key, vals := range c.Request.URL.Query() {
+		if key == "orderBy" || key == "orderDir" || key == "page" || key == "pageSize" {
+			continue
+		}
+		if len(vals) == 0 || vals[0] == "" {
+			continue
+		}
+
+		v := vals[0]
+
+		if key == "id" {
+			if id, err := strconv.ParseUint(v, 10, 64); err == nil {
+				filters[key] = id
+				continue
+			}
+		}
+
+		if key == "status" {
+			if b, err := strconv.ParseBool(v); err == nil {
+				filters[key] = b
+				continue
+			}
+		}
+
+		filters[key] = v
+	}
+
+	orderBy := c.Query("orderBy")
+	orderDir := c.Query("orderDir")
+
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	offset := (page - 1) * pageSize
+
+	agendamentos, err := h.uc.ListarPorPrestadorIDAgrupado(
+		c.Request.Context(),
+		uint(idUsuario),
+		filters,
+		orderBy,
+		orderDir,
+		pageSize,
+		offset,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":      agendamentos,
+		"page":      page,
+		"pageSize":  pageSize,
+		"orderBy":   orderBy,
+		"direction": orderDir,
+		"filters":   filters,
+	})
+}
+
 func (h *AgendamentoHandler) ListarPorCatalogID(c *gin.Context) {
 	idUsuario, err := getUsuarioID(c)
 	if err != nil {

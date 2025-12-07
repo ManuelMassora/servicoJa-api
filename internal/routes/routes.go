@@ -55,6 +55,7 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 		agendamento.POST("/recusar/:id", middleware.HasRole("PRESTADOR"), container.AgendamentoH.Recusar)
 		agendamento.POST("/cancelar/:id", middleware.HasRole("CLIENTE"), container.AgendamentoH.Cancelar)
 		agendamento.GET("/cliente", middleware.HasRole("CLIENTE"), container.AgendamentoH.ListarPorClienteID)
+		agendamento.GET("/prestador", middleware.HasRole("PRESTADOR"), container.AgendamentoH.ListarPorPrestadorID)
 		agendamento.GET("/location", container.AgendamentoH.ListarPorLocalizacao)
 		agendamento.GET("/:catalogoID", middleware.HasRole("PRESTADOR"), container.AgendamentoH.ListarPorCatalogID)
 	}

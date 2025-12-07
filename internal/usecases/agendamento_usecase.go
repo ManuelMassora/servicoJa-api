@@ -58,6 +58,11 @@ type AgendamentoResponse struct {
 	Anexos      []string 	`json:"anexos"`
 }
 
+type AgendamentoGroupCategoriaResponse struct {
+	Catalogo	string		`json:"catalogo"`
+	AgendamentoResponse []AgendamentoResponse	`json:"agendamentos"`
+}
+
 type ClientesAgendamentosResponse struct {
 	ID			uint		`json:"id"`
 	ClienteNome     string `json:"nome"`
@@ -332,6 +337,73 @@ func (uc *AgendamentoUC) ListarPorClienteID(ctx context.Context, idUsuario uint,
 			Anexos: urls,
 		})
 	}
+	return resp, nil
+}
+
+func (uc *AgendamentoUC) ListarPorPrestadorIDAgrupado(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoGroupCategoriaResponse, error) {
+	// Pega a lista de agendamentos
+	agendamentos, err := uc.r.ListarPorPrestadorID(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Pega os anexos
+	var agendamentosIDs []uint
+	for _, agendamento := range agendamentos {
+		agendamentosIDs = append(agendamentosIDs, agendamento.ID)
+	}
+
+	anexos, err := uc.anexoImagemRepo.FindByAgendamentoIDs(ctx, agendamentosIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map de anexos por agendamento
+	anexosPorAgendamentoMap := make(map[uint][]string)
+	for _, anexo := range anexos {
+		anexosPorAgendamentoMap[*anexo.AgendamentoID] = append(anexosPorAgendamentoMap[*anexo.AgendamentoID], anexo.URL)
+	}
+
+	// Agrupamento
+	var resp []AgendamentoGroupCategoriaResponse
+	var currentGroup *AgendamentoGroupCategoriaResponse
+
+	for _, agendamento := range agendamentos {
+		urls := anexosPorAgendamentoMap[agendamento.ID]
+		agResp := AgendamentoResponse{
+			ID: agendamento.ID,
+			Detalhe: agendamento.Detalhe,
+			Catalogo: agendamento.Catalogo.Nome,
+			Cliente: ClientesAgendamentosResponse{
+				ID: agendamento.IDCliente,
+				ClienteNome: agendamento.Cliente.Nome,
+			},
+			Prestador: PrestadorAgendamentosResponse{
+				ID: agendamento.Catalogo.IDPrestador,
+				PrestadorNome: agendamento.Catalogo.Prestador.Nome,
+			},
+			DataHora: agendamento.DataHora,
+			Status:   agendamento.Status,
+			Localizacao: agendamento.Localizacao,
+			Latitude: agendamento.Latitude,
+			Longitude: agendamento.Longitude,
+			Anexos: urls,
+		}
+
+		// Se não existe grupo atual ou catálogo diferente, cria novo grupo
+		if currentGroup == nil || currentGroup.Catalogo != agendamento.Catalogo.Nome {
+			newGroup := AgendamentoGroupCategoriaResponse{
+				Catalogo: agendamento.Catalogo.Nome,
+				AgendamentoResponse: []AgendamentoResponse{agResp},
+			}
+			resp = append(resp, newGroup)
+			currentGroup = &resp[len(resp)-1]
+		} else {
+			// Se mesmo catálogo do grupo atual, adiciona ao grupo existente
+			currentGroup.AgendamentoResponse = append(currentGroup.AgendamentoResponse, agResp)
+		}
+	}
+
 	return resp, nil
 }
 
