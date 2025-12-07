@@ -35,44 +35,50 @@ func NewAgendamentoUC(
 }
 
 type AgendamentoRequest struct {
-	Detalhe 	string 		`json:"detalhe" form:"detalhe" binding:"required"`
-	IDCatalogo  uint  		`json:"id_catalogo" form:"id_catalogo" binding:"required"`
-	DataHora 	time.Time   `json:"datahora" form:"datahora" binding:"required"`
-	Localizacao string   	`json:"localizacao" form:"localizacao" binding:"required"`
-	Latitude    float64  	`json:"latitude" form:"latitude" binding:"required"`
-	Longitude   float64  	`json:"longitude" form:"longitude" binding:"required"`
-	Anexos      []string 	`binding:"-"`
+	Detalhe     string    `json:"detalhe" form:"detalhe" binding:"required"`
+	IDCatalogo  uint      `json:"id_catalogo" form:"id_catalogo" binding:"required"`
+	DataHora    time.Time `json:"datahora" form:"datahora" binding:"required"`
+	Localizacao string    `json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude    float64   `json:"latitude" form:"latitude" binding:"required"`
+	Longitude   float64   `json:"longitude" form:"longitude" binding:"required"`
+	Anexos      []string  `binding:"-"`
 }
 
 type AgendamentoResponse struct {
-	ID			uint		`json:"id"`
-	Detalhe 	string 		`json:"detalhe"`
-	Catalogo	string		`json:"catalogo"`
-	Cliente		ClientesAgendamentosResponse		`json:"cliente"`
-	Prestador	PrestadorAgendamentosResponse		`json:"prestador"`
-	DataHora 	time.Time   `json:"datahora"`
-	Status 		string   	`json:"status"`
-	Localizacao string   	`json:"localizacao"`
-	Latitude    float64  	`json:"latitude"`
-	Longitude   float64  	`json:"longitude"`
-	Anexos      []string 	`json:"anexos"`
+	ID          uint                          `json:"id"`
+	Detalhe     string                        `json:"detalhe"`
+	Catalogo    string                        `json:"catalogo"`
+	Cliente     ClientesAgendamentosResponse  `json:"cliente"`
+	Prestador   PrestadorAgendamentosResponse `json:"prestador"`
+	DataHora    time.Time                     `json:"datahora"`
+	Status      string                        `json:"status"`
+	Localizacao string                        `json:"localizacao"`
+	Latitude    float64                       `json:"latitude"`
+	Longitude   float64                       `json:"longitude"`
+	Anexos      []string                      `json:"anexos"`
 }
 
 type AgendamentoGroupCategoriaResponse struct {
-	Catalogo	string		`json:"catalogo"`
-	AgendamentoResponse []AgendamentoResponse	`json:"agendamentos"`
+	IDCatalogo uint                          `json:"id_catalogo"`
+	Catalogo   string                        `json:"catalogo"`
+	SubGrupos  []AgendamentoSubGrupoResponse `json:"subgrupos"`
+}
+
+type AgendamentoSubGrupoResponse struct {
+	DataGrupo    string                `json:"dataGrupo"`
+	Agendamentos []AgendamentoResponse `json:"agendamentos"`
 }
 
 type ClientesAgendamentosResponse struct {
-	ID			uint		`json:"id"`
-	ClienteNome     string `json:"nome"`
+	ID          uint   `json:"id"`
+	ClienteNome string `json:"nome"`
 }
 type PrestadorAgendamentosResponse struct {
-	ID				uint	`json:"id"`
-	PrestadorNome   string `json:"nome"`
+	ID            uint   `json:"id"`
+	PrestadorNome string `json:"nome"`
 }
 
-func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) error {
+func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) error {
 	catalogo, err := uc.catalogoRepo.FindByID(ctx, req.IDCatalogo)
 	if err != nil {
 		return err
@@ -121,14 +127,14 @@ func(uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCl
 }
 
 func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*AgendamentoResponse, error) {
-	
+
 	agendamento, err := uc.r.BuscarPorID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	clienteIDUsuario := agendamento.Cliente.IDUsuario
 	prestadorIDUsuario := agendamento.Catalogo.Prestador.IDUsuario
-	
+
 	if idUsuario != clienteIDUsuario && idUsuario != prestadorIDUsuario {
 		return nil, errors.New("acesso negado: você não é o cliente nem o prestador deste agendamento")
 	}
@@ -138,22 +144,22 @@ func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*
 		return nil, err
 	}
 	return &AgendamentoResponse{
-		ID: agendamento.ID,
-		Detalhe: agendamento.Detalhe,
+		ID:       agendamento.ID,
+		Detalhe:  agendamento.Detalhe,
 		Catalogo: agendamento.Catalogo.Nome,
 		Cliente: ClientesAgendamentosResponse{
-			ID: agendamento.IDCliente,
+			ID:          agendamento.IDCliente,
 			ClienteNome: agendamento.Cliente.Nome,
 		},
 		Prestador: PrestadorAgendamentosResponse{
-			ID: agendamento.Catalogo.IDPrestador,
+			ID:            agendamento.Catalogo.IDPrestador,
 			PrestadorNome: agendamento.Catalogo.Prestador.Nome,
 		},
-		DataHora: agendamento.DataHora,
-		Status: agendamento.Status,
+		DataHora:    agendamento.DataHora,
+		Status:      agendamento.Status,
 		Localizacao: agendamento.Localizacao,
-		Latitude: agendamento.Latitude,
-		Longitude: agendamento.Longitude,
+		Latitude:    agendamento.Latitude,
+		Longitude:   agendamento.Longitude,
 		Anexos: func() []string {
 			var urls []string
 			for _, anexo := range anexos {
@@ -178,8 +184,8 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 	}
 	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
 		IDUsuario: agendamento.IDCliente,
-		Titulo: "Resposta ao Agendamento",
-		Mensagem: "Seu agendamento foi aceito para o serviço: " + agendamento.Catalogo.Nome,
+		Titulo:    "Resposta ao Agendamento",
+		Mensagem:  "Seu agendamento foi aceito para o serviço: " + agendamento.Catalogo.Nome,
 	})
 	if err != nil {
 		return err
@@ -189,23 +195,23 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 		return err
 	}
 	servico := &model.Servico{
-		IDAgendamento: &id,
-		Localizacao: agendamento.Localizacao,
-		Latitude: agendamento.Latitude,
-		Longitude: agendamento.Longitude,
-		Status: model.StatusEmAndamento,
-		IDCliente: agendamento.IDCliente,
-		IDPrestador: agendamento.Catalogo.IDPrestador,
+		IDAgendamento:  &id,
+		Localizacao:    agendamento.Localizacao,
+		Latitude:       agendamento.Latitude,
+		Longitude:      agendamento.Longitude,
+		Status:         model.StatusEmAndamento,
+		IDCliente:      agendamento.IDCliente,
+		IDPrestador:    agendamento.Catalogo.IDPrestador,
 		DataHoraInicio: time.Now(),
 	}
 
 	switch agendamento.Catalogo.TipoPreco {
-		case "fixo":
-			servico.Preco = agendamento.Catalogo.ValorFixo
-		case "por_hora":
-			servico.Preco = 0.0 // Initial price for hourly services, will be calculated at finalization
-		default:
-			return errors.New("tipo de preço de catálogo inválido")
+	case "fixo":
+		servico.Preco = agendamento.Catalogo.ValorFixo
+	case "por_hora":
+		servico.Preco = 0.0 // Initial price for hourly services, will be calculated at finalization
+	default:
+		return errors.New("tipo de preço de catálogo inválido")
 	}
 
 	err = uc.servico.Criar(ctx, servico)
@@ -226,8 +232,8 @@ func (uc *AgendamentoUC) Recusar(ctx context.Context, id uint, idUsuario uint) e
 	}
 	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
 		IDUsuario: agendamento.IDCliente,
-		Titulo: "Resposta ao Agendamento",
-		Mensagem: "Seu agendamento foi recusado para o serviço: " + agendamento.Catalogo.Nome,
+		Titulo:    "Resposta ao Agendamento",
+		Mensagem:  "Seu agendamento foi recusado para o serviço: " + agendamento.Catalogo.Nome,
 	})
 	if err != nil {
 		return err
@@ -275,82 +281,134 @@ func (uc *AgendamentoUC) Listar(ctx context.Context, filters map[string]interfac
 	for _, agendamento := range agendamentos {
 		urls := anexosPorAgendamentoMap[agendamento.ID]
 		resp = append(resp, AgendamentoResponse{
-			ID: agendamento.ID,
-			Detalhe: agendamento.Detalhe,
+			ID:       agendamento.ID,
+			Detalhe:  agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
 			Cliente: ClientesAgendamentosResponse{
-				ID: agendamento.IDCliente,
+				ID:          agendamento.IDCliente,
 				ClienteNome: agendamento.Cliente.Nome,
 			},
 			Prestador: PrestadorAgendamentosResponse{
-				ID: agendamento.Catalogo.IDPrestador,
+				ID:            agendamento.Catalogo.IDPrestador,
 				PrestadorNome: agendamento.Catalogo.Prestador.Nome,
 			},
-			DataHora: agendamento.DataHora,
-			Status:   agendamento.Status,
+			DataHora:    agendamento.DataHora,
+			Status:      agendamento.Status,
 			Localizacao: agendamento.Localizacao,
-			Latitude: agendamento.Latitude,
-			Longitude: agendamento.Longitude,
-			Anexos: urls,
+			Latitude:    agendamento.Latitude,
+			Longitude:   agendamento.Longitude,
+			Anexos:      urls,
 		})
 	}
 	return resp, nil
 }
 
-func (uc *AgendamentoUC) ListarPorClienteID(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoResponse, error) {
+func (uc *AgendamentoUC) ListarPorClienteID(
+	ctx context.Context,
+	idUsuario uint,
+	filters map[string]interface{},
+	orderBy string,
+	orderDir string,
+	limit, offset int,
+) ([]AgendamentoGroupCategoriaResponse, error) {
+
 	agendamentos, err := uc.r.ListarPorClienteID(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}
+
 	var agendamentosIDs []uint
-	for _, agendamento := range agendamentos {
-		agendamentosIDs = append(agendamentosIDs, agendamento.ID)
+	for _, ag := range agendamentos {
+		agendamentosIDs = append(agendamentosIDs, ag.ID)
 	}
+
 	anexos, err := uc.anexoImagemRepo.FindByAgendamentoIDs(ctx, agendamentosIDs)
 	if err != nil {
 		return nil, err
 	}
+
 	anexosPorAgendamentoMap := make(map[uint][]string)
 	for _, anexo := range anexos {
 		anexosPorAgendamentoMap[*anexo.AgendamentoID] = append(anexosPorAgendamentoMap[*anexo.AgendamentoID], anexo.URL)
 	}
-	var resp []AgendamentoResponse
-	for _, agendamento := range agendamentos {
-		urls := anexosPorAgendamentoMap[agendamento.ID]
-		resp = append(resp, AgendamentoResponse{
-			ID: agendamento.ID,
-			Detalhe: agendamento.Detalhe,
-			Catalogo: agendamento.Catalogo.Nome,
+
+	var resp []AgendamentoGroupCategoriaResponse
+
+	mapCatalogo := make(map[string]*AgendamentoGroupCategoriaResponse)
+
+	for _, ag := range agendamentos {
+		dataGrupo := ag.CreatedAt.Format("2006-01-02")
+
+		agResp := AgendamentoResponse{
+			ID:       ag.ID,
+			Detalhe:  ag.Detalhe,
+			Catalogo: ag.Catalogo.Nome,
 			Cliente: ClientesAgendamentosResponse{
-				ID: agendamento.IDCliente,
-				ClienteNome: agendamento.Cliente.Nome,
+				ID:          ag.IDCliente,
+				ClienteNome: ag.Cliente.Nome,
 			},
 			Prestador: PrestadorAgendamentosResponse{
-				ID: agendamento.Catalogo.IDPrestador,
-				PrestadorNome: agendamento.Catalogo.Prestador.Nome,
+				ID:            ag.Catalogo.IDPrestador,
+				PrestadorNome: ag.Catalogo.Prestador.Nome,
 			},
-			DataHora: agendamento.DataHora,
-			Status:   agendamento.Status,
-			Localizacao: agendamento.Localizacao,
-			Latitude: agendamento.Latitude,
-			Longitude: agendamento.Longitude,
-			Anexos: urls,
-		})
+			DataHora:    ag.CreatedAt,
+			Status:      ag.Status,
+			Localizacao: ag.Localizacao,
+			Latitude:    ag.Latitude,
+			Longitude:   ag.Longitude,
+			Anexos:      anexosPorAgendamentoMap[ag.ID],
+		}
+
+		if _, ok := mapCatalogo[ag.Catalogo.Nome]; !ok {
+			resp = append(resp, AgendamentoGroupCategoriaResponse{
+				IDCatalogo: ag.Catalogo.ID,
+				Catalogo:   ag.Catalogo.Nome,
+				SubGrupos:  []AgendamentoSubGrupoResponse{},
+			})
+			mapCatalogo[ag.Catalogo.Nome] = &resp[len(resp)-1]
+		}
+
+		grupoCatalogo := mapCatalogo[ag.Catalogo.Nome]
+
+		var subGrupo *AgendamentoSubGrupoResponse
+		for i := range grupoCatalogo.SubGrupos {
+			if grupoCatalogo.SubGrupos[i].DataGrupo == dataGrupo {
+				subGrupo = &grupoCatalogo.SubGrupos[i]
+				break
+			}
+		}
+
+		if subGrupo == nil {
+			grupoCatalogo.SubGrupos = append(grupoCatalogo.SubGrupos, AgendamentoSubGrupoResponse{
+				DataGrupo:    dataGrupo,
+				Agendamentos: []AgendamentoResponse{agResp},
+			})
+
+		} else {
+			subGrupo.Agendamentos = append(subGrupo.Agendamentos, agResp)
+		}
 	}
+
 	return resp, nil
 }
 
-func (uc *AgendamentoUC) ListarPorPrestadorIDAgrupado(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]AgendamentoGroupCategoriaResponse, error) {
-	// Pega a lista de agendamentos
+func (uc *AgendamentoUC) ListarPorPrestadorIDAgrupado(
+	ctx context.Context,
+	idUsuario uint,
+	filters map[string]interface{},
+	orderBy string,
+	orderDir string,
+	limit, offset int,
+) ([]AgendamentoGroupCategoriaResponse, error) {
+
 	agendamentos, err := uc.r.ListarPorPrestadorID(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	// Pega os anexos
 	var agendamentosIDs []uint
-	for _, agendamento := range agendamentos {
-		agendamentosIDs = append(agendamentosIDs, agendamento.ID)
+	for _, ag := range agendamentos {
+		agendamentosIDs = append(agendamentosIDs, ag.ID)
 	}
 
 	anexos, err := uc.anexoImagemRepo.FindByAgendamentoIDs(ctx, agendamentosIDs)
@@ -358,49 +416,73 @@ func (uc *AgendamentoUC) ListarPorPrestadorIDAgrupado(ctx context.Context, idUsu
 		return nil, err
 	}
 
-	// Map de anexos por agendamento
 	anexosPorAgendamentoMap := make(map[uint][]string)
 	for _, anexo := range anexos {
 		anexosPorAgendamentoMap[*anexo.AgendamentoID] = append(anexosPorAgendamentoMap[*anexo.AgendamentoID], anexo.URL)
 	}
 
-	// Agrupamento
+	// Resultado final
 	var resp []AgendamentoGroupCategoriaResponse
-	var currentGroup *AgendamentoGroupCategoriaResponse
 
-	for _, agendamento := range agendamentos {
-		urls := anexosPorAgendamentoMap[agendamento.ID]
+	// Map auxiliar para localizar catálogo já criado
+	mapCatalogo := make(map[string]*AgendamentoGroupCategoriaResponse)
+
+	for _, ag := range agendamentos {
+
+		// define chave do subgrupo (somente dia)
+		dataGrupo := ag.CreatedAt.Format("2006-01-02")
+
+		// monta response do agendamento
 		agResp := AgendamentoResponse{
-			ID: agendamento.ID,
-			Detalhe: agendamento.Detalhe,
-			Catalogo: agendamento.Catalogo.Nome,
+			ID:       ag.ID,
+			Detalhe:  ag.Detalhe,
+			Catalogo: ag.Catalogo.Nome,
 			Cliente: ClientesAgendamentosResponse{
-				ID: agendamento.IDCliente,
-				ClienteNome: agendamento.Cliente.Nome,
+				ID:          ag.IDCliente,
+				ClienteNome: ag.Cliente.Nome,
 			},
 			Prestador: PrestadorAgendamentosResponse{
-				ID: agendamento.Catalogo.IDPrestador,
-				PrestadorNome: agendamento.Catalogo.Prestador.Nome,
+				ID:            ag.Catalogo.IDPrestador,
+				PrestadorNome: ag.Catalogo.Prestador.Nome,
 			},
-			DataHora: agendamento.DataHora,
-			Status:   agendamento.Status,
-			Localizacao: agendamento.Localizacao,
-			Latitude: agendamento.Latitude,
-			Longitude: agendamento.Longitude,
-			Anexos: urls,
+			DataHora:    ag.CreatedAt,
+			Status:      ag.Status,
+			Localizacao: ag.Localizacao,
+			Latitude:    ag.Latitude,
+			Longitude:   ag.Longitude,
+			Anexos:      anexosPorAgendamentoMap[ag.ID],
 		}
 
-		// Se não existe grupo atual ou catálogo diferente, cria novo grupo
-		if currentGroup == nil || currentGroup.Catalogo != agendamento.Catalogo.Nome {
-			newGroup := AgendamentoGroupCategoriaResponse{
-				Catalogo: agendamento.Catalogo.Nome,
-				AgendamentoResponse: []AgendamentoResponse{agResp},
+		// se ainda não existe o grupo do catálogo, cria
+		if _, ok := mapCatalogo[ag.Catalogo.Nome]; !ok {
+			resp = append(resp, AgendamentoGroupCategoriaResponse{
+				IDCatalogo: ag.Catalogo.ID,
+				Catalogo:   ag.Catalogo.Nome,
+				SubGrupos:  []AgendamentoSubGrupoResponse{},
+			})
+			mapCatalogo[ag.Catalogo.Nome] = &resp[len(resp)-1]
+		}
+
+		grupoCatalogo := mapCatalogo[ag.Catalogo.Nome]
+
+		// verifica se já existe subgrupo com esse dia
+		var subGrupo *AgendamentoSubGrupoResponse
+		for i := range grupoCatalogo.SubGrupos {
+			if grupoCatalogo.SubGrupos[i].DataGrupo == dataGrupo {
+				subGrupo = &grupoCatalogo.SubGrupos[i]
+				break
 			}
-			resp = append(resp, newGroup)
-			currentGroup = &resp[len(resp)-1]
+		}
+
+		// se não existir, cria
+		if subGrupo == nil {
+			grupoCatalogo.SubGrupos = append(grupoCatalogo.SubGrupos, AgendamentoSubGrupoResponse{
+				DataGrupo:    dataGrupo,
+				Agendamentos: []AgendamentoResponse{agResp},
+			})
+
 		} else {
-			// Se mesmo catálogo do grupo atual, adiciona ao grupo existente
-			currentGroup.AgendamentoResponse = append(currentGroup.AgendamentoResponse, agResp)
+			subGrupo.Agendamentos = append(subGrupo.Agendamentos, agResp)
 		}
 	}
 
@@ -435,23 +517,23 @@ func (uc *AgendamentoUC) ListarPorCatalogID(ctx context.Context, idUsuario, idCa
 	for _, agendamento := range agendamentos {
 		urls := anexosPorAgendamentoMap[agendamento.ID]
 		resp = append(resp, AgendamentoResponse{
-			ID: agendamento.ID,
-			Detalhe: agendamento.Detalhe,
+			ID:       agendamento.ID,
+			Detalhe:  agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
 			Cliente: ClientesAgendamentosResponse{
-				ID: agendamento.IDCliente,
+				ID:          agendamento.IDCliente,
 				ClienteNome: agendamento.Cliente.Nome,
 			},
 			Prestador: PrestadorAgendamentosResponse{
-				ID: agendamento.Catalogo.IDPrestador,
+				ID:            agendamento.Catalogo.IDPrestador,
 				PrestadorNome: agendamento.Catalogo.Prestador.Nome,
 			},
-			DataHora: agendamento.DataHora,
-			Status:   agendamento.Status,
+			DataHora:    agendamento.DataHora,
+			Status:      agendamento.Status,
 			Localizacao: agendamento.Localizacao,
-			Latitude: agendamento.Latitude,
-			Longitude: agendamento.Longitude,
-			Anexos: urls,
+			Latitude:    agendamento.Latitude,
+			Longitude:   agendamento.Longitude,
+			Anexos:      urls,
 		})
 	}
 	return resp, nil
@@ -478,23 +560,23 @@ func (uc *AgendamentoUC) ListarPorLocalizacao(ctx context.Context, userID uint, 
 	for _, agendamento := range agendamentos {
 		urls := anexosPorAgendamentoMap[agendamento.ID]
 		resp = append(resp, AgendamentoResponse{
-			ID: agendamento.ID,
-			Detalhe: agendamento.Detalhe,
+			ID:       agendamento.ID,
+			Detalhe:  agendamento.Detalhe,
 			Catalogo: agendamento.Catalogo.Nome,
 			Cliente: ClientesAgendamentosResponse{
-				ID: agendamento.IDCliente,
+				ID:          agendamento.IDCliente,
 				ClienteNome: agendamento.Cliente.Nome,
 			},
 			Prestador: PrestadorAgendamentosResponse{
-				ID: agendamento.Catalogo.IDPrestador,
+				ID:            agendamento.Catalogo.IDPrestador,
 				PrestadorNome: agendamento.Catalogo.Prestador.Nome,
 			},
-			DataHora: agendamento.DataHora,
-			Status:   agendamento.Status,
+			DataHora:    agendamento.DataHora,
+			Status:      agendamento.Status,
 			Localizacao: agendamento.Localizacao,
-			Latitude: agendamento.Latitude,
-			Longitude: agendamento.Longitude,
-			Anexos: urls,
+			Latitude:    agendamento.Latitude,
+			Longitude:   agendamento.Longitude,
+			Anexos:      urls,
 		})
 	}
 	return resp, nil
