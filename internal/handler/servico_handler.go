@@ -42,6 +42,31 @@ func (h *ServicoHandler) FinalizarServico(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Serviço finalizado com sucesso"})
 }
 
+func (h *ServicoHandler) ConfirmarServico(c *gin.Context) {
+	idServico, err := getServicoID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID do serviço inválido"})
+		return
+	}
+
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.uc.ConfirmarServico(c.Request.Context(), idServico, uint(idUsuario))
+	if err != nil {
+		if err.Error() == "usuário não autorizado confirmar este serviço" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Serviço finalizado com sucesso"})
+}
+
 func (h *ServicoHandler) CancelarServico(c *gin.Context) {
 	idServico, err := getServicoID(c) // Assumindo que 'getServicoID' extrai o ID do parâmetro da URL
 	if err != nil {

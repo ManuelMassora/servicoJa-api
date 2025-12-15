@@ -202,7 +202,7 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 		Status:         model.StatusEmAndamento,
 		IDCliente:      agendamento.IDCliente,
 		IDPrestador:    agendamento.Catalogo.IDPrestador,
-		DataHoraInicio: time.Now(),
+		DataHoraInicio: time.Now().UTC(),
 	}
 
 	switch agendamento.Catalogo.TipoPreco {

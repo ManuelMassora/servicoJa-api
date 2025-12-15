@@ -13,6 +13,7 @@ const (
 	StatusAceito	  	Status = "ACEITO"
 	StatusRejeitado	  	Status = "REJEITADO"
 	StatusProposta	  	Status = "PROPOSTA"
+	StatusConfirmado	Status = "CONFIRMADO"
 )
 
 // Tipo de movimento financeiro

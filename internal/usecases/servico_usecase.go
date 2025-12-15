@@ -3,43 +3,44 @@ package usecases
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 )
 
 type ServicoUseCase struct {
-	r model.ServicoRepo
+	r               model.ServicoRepo
 	agendamentoRepo model.AgendamentoRepo
-	vagaRepo model.VagaRepo
+	vagaRepo        model.VagaRepo
 	notificacaoRepo model.NotificacaoRepo
-    usuarioRepo model.UsuarioRepo
+	usuarioRepo     model.UsuarioRepo
 }
 
 type ServicoResponse struct {
-	ID		  		uint      	`json:"id"`
-	Localizacao 	string   	`json:"localizacao"`
-	Latitude    	float64  	`json:"latitude"`
-	Longitude   	float64  	`json:"longitude"`
-	Preco       	float64  	`json:"preco"`
-	Status      	string   	`json:"status"`
-	IDAgendamento   *uint    	`json:"id_agendamento,omitempty"`
-	IDVaga 			*uint 		`json:"id_vaga,omitempty"`
-	DataHoraInicio  time.Time 	`json:"data_inicio,omitempty"`
-	DataHoraFim     time.Time  	`json:"data_fim,omitempty"`
-	Cliente    		uint      	`json:"cliente"`
-	Prestador  		uint      	`json:"prestador"`
-	Catalogo 		string		`json:"catalogo,omitempty"`
-	Descricao		string		`json:"descricao"`
+	ID             uint      `json:"id"`
+	Localizacao    string    `json:"localizacao"`
+	Latitude       float64   `json:"latitude"`
+	Longitude      float64   `json:"longitude"`
+	Preco          float64   `json:"preco"`
+	Status         string    `json:"status"`
+	IDAgendamento  *uint     `json:"id_agendamento,omitempty"`
+	IDVaga         *uint     `json:"id_vaga,omitempty"`
+	DataHoraInicio time.Time `json:"data_inicio,omitempty"`
+	DataHoraFim    time.Time `json:"data_fim,omitempty"`
+	Cliente        uint      `json:"cliente"`
+	Prestador      uint      `json:"prestador"`
+	Catalogo       string    `json:"catalogo,omitempty"`
+	Descricao      string    `json:"descricao"`
 }
 
 func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo) *ServicoUseCase {
 	return &ServicoUseCase{
-		r: r,
+		r:               r,
 		agendamentoRepo: agendamentoRepo,
-		vagaRepo: vagaRepo,
+		vagaRepo:        vagaRepo,
 		notificacaoRepo: notificacaoRepo,
-        usuarioRepo: usuarioRepo,
+		usuarioRepo:     usuarioRepo,
 	}
 }
 
@@ -56,8 +57,8 @@ func (uc *ServicoUseCase) FinalizarServico(ctx context.Context, idServico, idUsu
 	}
 	err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
 		IDUsuario: servico.IDCliente,
-		Titulo: "Serviço Concluído",
-		Mensagem: "O serviço foi concluído com sucesso. Obrigado por usar nossos serviços!",
+		Titulo:    "Serviço Concluído",
+		Mensagem:  "O serviço foi concluído com sucesso. Obrigado por usar nossos serviços!",
 	})
 	if err != nil {
 		return err
@@ -67,28 +68,56 @@ func (uc *ServicoUseCase) FinalizarServico(ctx context.Context, idServico, idUsu
 		return err
 	}
 	servico.Status = model.StatusConcluido
-	servico.DataHoraFim = time.Now()
+	servico.DataHoraFim = time.Now().UTC()
 
-	// Calculate final price for hourly services
 	if servico.Agendamento.Catalogo.TipoPreco == "por_hora" {
 		if servico.DataHoraInicio.IsZero() {
 			return errors.New("data de início do serviço não definida para cálculo por hora")
 		}
+		if servico.DataHoraInicio.After(servico.DataHoraFim) {
+			log.Println("ERRO: Data de início é posterior à data de fim. Início:", servico.DataHoraInicio, "Fim:", servico.DataHoraFim)
+			return errors.New("a data/hora de início do serviço não pode ser posterior à data/hora de fim")
+		}
+
 		duration := servico.DataHoraFim.Sub(servico.DataHoraInicio)
 		servico.Preco = CalculateFinalServicePrice(&servico.Agendamento.Catalogo, duration)
 	}
 	return uc.r.Atualizar(ctx, servico)
 }
 
-func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsuario uint) error {	
+func (uc *ServicoUseCase) ConfirmarServico(ctx context.Context, idServico, idUsuario uint) error {
+	servico, err := uc.r.BuscarPorID(ctx, idServico)
+	if err != nil {
+		return err
+	}
+	if servico.Cliente.IDUsuario != idUsuario {
+		return errors.New("usuário não autorizado confirmar este serviço")
+	}
+	if servico.Status != model.StatusConcluido {
+		return errors.New("serviço deve estar concluído para confirmação")
+	}
+	err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
+		IDUsuario: servico.Agendamento.Catalogo.IDPrestador,
+		Titulo:    "Serviço Confirmado",
+		Mensagem:  "O cliente confirmou a conclusão do serviço. Obrigado por usar nossos serviços!",
+	})
+	if err != nil {
+		return err
+	}
+	servico.Status = model.StatusConfirmado
+	servico.DataHoraConfirmado = time.Now().UTC()
+	return uc.r.Atualizar(ctx, servico)
+}
+
+func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsuario uint) error {
 	servico, err := uc.r.BuscarPorID(ctx, idServico)
 	if err != nil {
 		return err
 	}
 	err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
 		IDUsuario: servico.IDCliente,
-		Titulo: "Serviço Cancelado",
-		Mensagem: "O serviço foi cancelado com sucesso. Esperamos que tenha gostado de nossos serviços!",
+		Titulo:    "Serviço Cancelado",
+		Mensagem:  "O serviço foi cancelado com sucesso. Esperamos que tenha gostado de nossos serviços!",
 	})
 	if err != nil {
 		return err
@@ -140,9 +169,9 @@ func (uc *ServicoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, 
 			IDVaga:         s.IDVaga,
 			DataHoraInicio: s.DataHoraInicio,
 			DataHoraFim:    s.DataHoraFim,
-			Cliente:         s.IDCliente,
-			Prestador:       s.IDPrestador,
-			Descricao:       descricao,
+			Cliente:        s.IDCliente,
+			Prestador:      s.IDPrestador,
+			Descricao:      descricao,
 		})
 	}
 	return resp, nil
@@ -181,7 +210,7 @@ func (uc *ServicoUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint
 			Cliente:        s.IDCliente,
 			Prestador:      s.IDPrestador,
 			Descricao:      descricao,
-			Catalogo: 		catalogo,
+			Catalogo:       catalogo,
 		})
 	}
 	return resp, nil
@@ -215,9 +244,9 @@ func (uc *ServicoUseCase) ListarPorLocalizacao(ctx context.Context, userID uint,
 			IDVaga:         s.IDVaga,
 			DataHoraInicio: s.DataHoraInicio,
 			DataHoraFim:    s.DataHoraFim,
-			Cliente:         s.IDCliente,
-			Prestador:       s.IDPrestador,
-			Descricao:       descricao,
+			Cliente:        s.IDCliente,
+			Prestador:      s.IDPrestador,
+			Descricao:      descricao,
 		})
 	}
 	return resp, nil

@@ -62,6 +62,7 @@ func SetRoutes(server *gin.Engine, container *di.Container) {
 	servico := server.Group("servico", middleware.Auth())
 	{
 		servico.POST("/finalizar/:id", middleware.HasRole("PRESTADOR"), container.ServicoH.FinalizarServico)
+		servico.POST("/confirmar/:id", middleware.HasRole("CLIENTE"), container.ServicoH.ConfirmarServico)
 		servico.POST("/cancelar/:id", middleware.HasRole("CLIENTE", "PRESTADOR"), container.ServicoH.CancelarServico)
 		servico.GET("/cliente", middleware.HasRole("CLIENTE"), container.ServicoH.ListarPorCliente)
 		servico.GET("/prestador", middleware.HasRole("PRESTADOR"), container.ServicoH.ListarPorPrestador)

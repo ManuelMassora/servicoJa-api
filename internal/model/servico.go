@@ -18,10 +18,9 @@ type Servico struct {
 	Vaga   *Vaga `gorm:"foreignKey:IDVaga;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"vaga,omitempty"`
 	DataHoraInicio  time.Time `gorm:"column:data_inicio;type:timestamp;default:null" json:"data_inicio,omitempty"`
 	DataHoraFim     time.Time  `gorm:"column:data_fim;type:timestamp;default:null" json:"data_fim,omitempty"`
-	
+	DataHoraConfirmado  time.Time  `gorm:"column:data_confirmado;type:timestamp;default:null" json:"data_confirmado,omitempty"`
 	IDCliente    uint      `gorm:"column:id_cliente;not null"`
 	Cliente      *Cliente  `gorm:"foreignKey:IDCliente"`
-
 	IDPrestador  uint      `gorm:"column:id_prestador;not null"`
 	Prestador    *Prestador `gorm:"foreignKey:IDPrestador"`
 }
