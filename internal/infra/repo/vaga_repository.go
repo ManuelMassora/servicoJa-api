@@ -165,3 +165,11 @@ func (r *VagaRepository) FindByLocation(ctx context.Context, latitude, longitude
 
 	return vagas, nil
 }
+
+func (r *VagaRepository) IncrementarPropostasNovas(ctx context.Context, id uint) error {
+	return r.db.Model(&model.Vaga{}).Where("id = ?", id).Update("count_propostas", gorm.Expr("count_propostas + ?", 1)).Error
+}
+
+func (r *VagaRepository) ZerarPropostasNovas(ctx context.Context, id uint) error {
+	return r.db.Model(&model.Vaga{}).Where("id = ?", id).Update("count_propostas", 0).Error
+}

@@ -18,6 +18,7 @@ type Catalogo struct {
 	Latitude    float64  `gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
 	Longitude   float64  `gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
 	Anexos      []AnexoImagem `gorm:"foreignKey:CatalogoID"`
+	CountAgendamentos	uint	`gorm:"count_agendamentos" json:"count_propostas,omitempty"`	
 }
 
 type CatalogoRepo interface {
@@ -28,4 +29,6 @@ type CatalogoRepo interface {
 	FindAll(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*Catalogo, error)
 	FindByPrestadorID(ctx context.Context, prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*Catalogo, error)
 	FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]*Catalogo, error)
+	IncrementarAgendamentosNovos(ctx context.Context, id uint) error
+	ZerarAgendamentosNovos(ctx context.Context, id uint) error
 }

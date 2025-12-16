@@ -17,6 +17,7 @@ type Vaga struct {
 	Prestador   *Prestador `gorm:"foreignKey:IDPrestador" json:"prestador,omitempty"`
 	Urgente     bool     `gorm:"column:urgente;not null;default:false" json:"urgente"`
 	Anexos      []AnexoImagem `gorm:"foreignKey:VagaID"`
+	CountPropostas	uint	`gorm:"count_propostas" json:"count_propostas,omitempty"`	
 }
 
 type VagaRepo interface {
@@ -28,4 +29,6 @@ type VagaRepo interface {
 	AceitarVaga(ctx context.Context, idVaga, idPrestador uint) error
 	AtualizarStatus(ctx context.Context, idVaga uint, status Status) error
 	FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Vaga, error)
+	IncrementarPropostasNovas(ctx context.Context, id uint) error
+	ZerarPropostasNovas(ctx context.Context, id uint) error
 }

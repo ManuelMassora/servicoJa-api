@@ -32,6 +32,7 @@ type ServicoResponse struct {
 	Prestador      uint      `json:"prestador"`
 	Catalogo       string    `json:"catalogo,omitempty"`
 	Descricao      string    `json:"descricao"`
+	SeAvaliado     bool      `json:"se_avaliado"`
 }
 
 func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo) *ServicoUseCase {
@@ -172,6 +173,7 @@ func (uc *ServicoUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, 
 			Cliente:        s.IDCliente,
 			Prestador:      s.IDPrestador,
 			Descricao:      descricao,
+			SeAvaliado:     s.IfAvaliadoCliente,
 		})
 	}
 	return resp, nil
@@ -211,6 +213,7 @@ func (uc *ServicoUseCase) ListarPorPrestador(ctx context.Context, idUsuario uint
 			Prestador:      s.IDPrestador,
 			Descricao:      descricao,
 			Catalogo:       catalogo,
+			SeAvaliado:     s.IfAvaliadoCliente,
 		})
 	}
 	return resp, nil
@@ -247,6 +250,7 @@ func (uc *ServicoUseCase) ListarPorLocalizacao(ctx context.Context, userID uint,
 			Cliente:        s.IDCliente,
 			Prestador:      s.IDPrestador,
 			Descricao:      descricao,
+			SeAvaliado:     s.IfAvaliadoCliente,
 		})
 	}
 	return resp, nil

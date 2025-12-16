@@ -137,3 +137,11 @@ func (r *CatalogoRepository) FindByLocation(ctx context.Context, latitude, longi
 
     return catalogos, nil
 }
+
+func (r *CatalogoRepository)IncrementarAgendamentosNovos(ctx context.Context, id uint) error {
+	return r.db.Model(&model.Catalogo{}).Where("id = ?", id).Update("count_agendamentos", gorm.Expr("count_agendamentos + ?", 1)).Error
+}
+
+func (r *CatalogoRepository)ZerarAgendamentosNovos(ctx context.Context, id uint) error {
+	return r.db.Model(&model.Catalogo{}).Where("id = ?", id).Update("count_agendamentos", 0).Error
+}

@@ -69,6 +69,9 @@ func (uc *PropostaUseCase) Criar(ctx context.Context, request PropostaRequest, i
 	if err != nil {
 		return err
 	}
+	if err := uc.vagaRepo.IncrementarPropostasNovas(ctx, vaga.ID); err != nil {
+		return err
+	}
 	proposta := &model.Proposta{
 		IDVaga:        request.IDVaga,
 		IDPrestador:   idUsuario,
@@ -77,11 +80,6 @@ func (uc *PropostaUseCase) Criar(ctx context.Context, request PropostaRequest, i
 		PrazoEstimado: request.PrazoEstimado,
 		Status:        model.StatusPendente,
 	}
-	// vaga.Prestador.IDUsuario = proposta.IDPrestador
-	// vaga.Status = model.StatusProposta
-	// if err := uc.vagaRepo.Salvar(ctx, vaga); err != nil {
-	//     return err
-	// }
 	return uc.propostaRepo.Salvar(ctx, proposta)
 }
 
@@ -114,7 +112,7 @@ func (uc *PropostaUseCase) Responder(ctx context.Context, idProposta, idUsuario 
 		if err != nil {
 			return err
 		}
-		vaga.Prestador.IDUsuario = proposta.IDPrestador
+		vaga.IDPrestador = &proposta.IDPrestador
 		vaga.Status = model.StatusProposta
 		if err := uc.vagaRepo.Salvar(ctx, vaga); err != nil {
 			return err
@@ -214,6 +212,10 @@ func (uc *PropostaUseCase) ListarPorVaga(ctx context.Context, idUsuario, idVaga 
 	// Busca no Repositório
 	propostas, err := uc.propostaRepo.ListarPorVaga(ctx, idVaga, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := uc.vagaRepo.ZerarPropostasNovas(ctx, vaga.ID); err != nil {
 		return nil, err
 	}
 

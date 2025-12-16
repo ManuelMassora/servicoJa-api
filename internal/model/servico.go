@@ -23,6 +23,7 @@ type Servico struct {
 	Cliente      *Cliente  `gorm:"foreignKey:IDCliente"`
 	IDPrestador  uint      `gorm:"column:id_prestador;not null"`
 	Prestador    *Prestador `gorm:"foreignKey:IDPrestador"`
+	IfAvaliadoCliente bool      `gorm:"column:if_avaliado_cliente;type:boolean;default:false" json:"if_avaliado_cliente"`
 }
 
 type ServicoRepo interface {

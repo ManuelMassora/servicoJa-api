@@ -76,6 +76,15 @@ func (uc *AvaliacaoUseCase) Criar(ctx context.Context, req AvaliacaoRequest, idA
 		return errors.New("usuário não autorizado a avaliar este serviço")
 	}
 
+	if servico.IfAvaliadoCliente {
+		return errors.New("usuário já avaliou este serviço")
+	}
+
+	servico.IfAvaliadoCliente = true
+	if err := uc.servicoRepo.Atualizar(ctx, servico); err != nil {
+		return err
+	}
+
 	avaliacao := &model.Avaliacao{
 		Nota: req.Pontuacao,
 		Comentario: req.Comentario,

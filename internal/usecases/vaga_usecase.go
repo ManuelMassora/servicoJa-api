@@ -41,6 +41,7 @@ type VagaResponse struct {
 	Cliente    	string  `json:"cliente"`
 	DataCriacao string  `json:"data_criacao"`
 	Anexos      []string `json:"anexos"`
+	PropostasNovas uint    `json:"propostas_novas,omitempty"`
 }
 
 func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) error {
@@ -85,6 +86,39 @@ func(uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) erro
 	vaga.DeletedAt.Valid = true
 	vaga.Status = model.StatusCancelado
 	return uc.vagaRepo.Salvar(ctx, vaga)
+}
+
+func(uc *VagaUseCase) BuscarPorIDIfCliente(ctx context.Context, id, idUsuario uint) (*VagaResponse, error) {
+	vaga, err := uc.vagaRepo.BuscarPorID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if vaga.IDCliente != idUsuario {
+		return nil, errors.New("vaga não pertence ao cliente")
+	}
+	anexos, err := uc.anexoImagemRepo.FindByVagaID(ctx, vaga.ID)
+	if err != nil {
+		return nil, err
+	}
+	var urls []string
+	for _, anexo := range anexos {
+		urls = append(urls, anexo.URL)
+	}
+	return &VagaResponse{
+		ID:          vaga.ID,
+		Titulo:      vaga.Titulo,
+		Descricao:   vaga.Descricao,
+		Localizacao: vaga.Localizacao,
+		Latitude:    vaga.Latitude,
+		Longitude:   vaga.Longitude,
+		Status:      string(vaga.Status),
+		Preco:       vaga.Preco,
+		Urgente:     vaga.Urgente,
+		Cliente:     vaga.Cliente.Nome,
+		DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
+		Anexos: urls,
+		PropostasNovas: vaga.CountPropostas,
+	}, nil
 }
 
 func(uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
@@ -168,6 +202,7 @@ func(uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filt
 			Cliente:     clienteNome,
 			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
 			Anexos: urls,
+			PropostasNovas: vaga.CountPropostas,
 		})
 	}
 	return resp, nil

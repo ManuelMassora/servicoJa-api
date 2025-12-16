@@ -119,8 +119,11 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 	if err != nil {
 		return err
 	}
-	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, catalogo.Prestador.IDUsuario)
+	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, catalogo.ID)
 	if err != nil {
+		return err
+	}
+	if err := uc.catalogoRepo.IncrementarAgendamentosNovos(ctx, catalogo.IDPrestador); err != nil {
 		return err
 	}
 	return nil
