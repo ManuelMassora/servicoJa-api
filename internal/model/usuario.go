@@ -5,18 +5,21 @@ import (
 	"errors"
 	"log"
 	"regexp"
+	"time"
 
 	"github.com/alexedwards/argon2id"
 )
 
 type Usuario struct {
 	BaseModel
-	Nome     			string 	`json:"nome"`
-	Telefone 			string 	`gorm:"unique" json:"telefone"`
-	Senha    			string 	`json:"senha,omitempty"`
-	NotificacoesNovas 	uint 	`json:"notificacoes_novas"`
-	RolePermissaoID   	uint
-	RolePermissao     	RolePermissao  `gorm:"foreignKey:RolePermissaoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"rolepermissao,omitempty"`
+	Nome               string     `json:"nome"`
+	Telefone           string     `gorm:"unique" json:"telefone"`
+	Senha              string     `json:"senha,omitempty"`
+	NotificacoesNovas  uint       `json:"notificacoes_novas"`
+	CancelamentosCount uint       `json:"cancelamentos_count" gorm:"default:0"`
+	SuspensoAte        *time.Time `json:"suspenso_ate,omitempty"`
+	RolePermissaoID    uint
+	RolePermissao      RolePermissao `gorm:"foreignKey:RolePermissaoID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"rolepermissao,omitempty"`
 }
 
 type UsuarioRepo interface {
@@ -24,6 +27,8 @@ type UsuarioRepo interface {
 	BuscarPorID(ctx context.Context, id uint) (*Usuario, error)
 	IncrementarNotificacoesNovas(ctx context.Context, id uint) error
 	ZerarNotificacoesNovas(ctx context.Context, id uint) error
+	IncrementarCancelamentos(ctx context.Context, id uint) (uint, error)
+	SuspenderUsuario(ctx context.Context, id uint, ate time.Time) error
 	BuscarPorTelefone(ctx context.Context, numero string) (*Usuario, error)
 	Atualizar(ctx context.Context, usuario *Usuario) error
 	Remover(ctx context.Context, id uint) error
@@ -32,11 +37,11 @@ type UsuarioRepo interface {
 
 // Cliente representa a ligação de um usuário com o perfil de cliente.
 type Cliente struct {
-	IDUsuario 	uint    `gorm:"primaryKey"`
-    Usuario   	Usuario `gorm:"constraint:OnDelete:CASCADE;foreignKey:IDUsuario;references:ID"`
-	Nome     	string 	`json:"nome"`
-	Telefone 	string 	`json:"telefone"`
-	ImagemURL 	string 	`gorm:"type:varchar(255)" json:"imagem_url"`
+	IDUsuario uint    `gorm:"primaryKey"`
+	Usuario   Usuario `gorm:"constraint:OnDelete:CASCADE;foreignKey:IDUsuario;references:ID"`
+	Nome      string  `json:"nome"`
+	Telefone  string  `json:"telefone"`
+	ImagemURL string  `gorm:"type:varchar(255)" json:"imagem_url"`
 }
 
 type ClienteRepo interface {
@@ -47,23 +52,23 @@ type ClienteRepo interface {
 
 // Prestador representa o perfil de prestador ligado a um usuário.
 type Prestador struct {
-	IDUsuario 			uint    	`gorm:"primaryKey"`
-    Usuario   			Usuario 	`gorm:"constraint:OnDelete:CASCADE;foreignKey:IDUsuario;references:ID"`
-	Nome     			string 		`json:"nome"`
-	Telefone 			string 		`json:"telefone"`
-	ImagemURL 			string 		`gorm:"type:varchar(255)" json:"imagem_url"`
-	Localizacao     	string   	`json:"localizacao"`
-	Latitude    		float64  	`gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
-	Longitude   		float64  	`gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
-	StatusDisponivel 	bool    	`json:"status_disponivel"`
-	Reputacao       	float64  	`json:"reputacao"`
-	CategoriaPrestadorID 	*uint    	`json:"categoria_prestador_id"`
-	CategoriaPrestador   	*CategoriaPrestador 	`gorm:"foreignKey:CategoriaPrestadorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"categoria_prestador,omitempty"`
+	IDUsuario            uint                `gorm:"primaryKey"`
+	Usuario              Usuario             `gorm:"constraint:OnDelete:CASCADE;foreignKey:IDUsuario;references:ID"`
+	Nome                 string              `json:"nome"`
+	Telefone             string              `json:"telefone"`
+	ImagemURL            string              `gorm:"type:varchar(255)" json:"imagem_url"`
+	Localizacao          string              `json:"localizacao"`
+	Latitude             float64             `gorm:"column:latitude;type:decimal(10,8);" json:"latitude"`
+	Longitude            float64             `gorm:"column:longitude;type:decimal(11,8);" json:"longitude"`
+	StatusDisponivel     bool                `json:"status_disponivel"`
+	Reputacao            float64             `json:"reputacao"`
+	CategoriaPrestadorID *uint               `json:"categoria_prestador_id"`
+	CategoriaPrestador   *CategoriaPrestador `gorm:"foreignKey:CategoriaPrestadorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"categoria_prestador,omitempty"`
 }
 
 type PrestadorRepo interface {
 	Criar(ctx context.Context, prestador *Prestador) error
-	Editar(ctx context.Context, id uint, campos map[string]interface{}) (*Prestador,error)
+	Editar(ctx context.Context, id uint, campos map[string]interface{}) (*Prestador, error)
 	AtualizarStatus(ctx context.Context, id uint, disponivel bool) error
 	BuscarPorID(ctx context.Context, id uint) (*Prestador, error)
 	Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]Prestador, error)
@@ -71,14 +76,14 @@ type PrestadorRepo interface {
 }
 
 var params = &argon2id.Params{
-    Memory: 16 * 1024,
-    Iterations: 1,
-    Parallelism: 1,
-    SaltLength: 16,
-    KeyLength: 16,
+	Memory:      16 * 1024,
+	Iterations:  1,
+	Parallelism: 1,
+	SaltLength:  16,
+	KeyLength:   16,
 }
 
-var strictE164Regex = regexp.MustCompile(`^\+[0-9]+$`)
+var strictE164Regex = regexp.MustCompile(`^[0-9]+$`)
 
 func validateNumericPhone(telefone string) error {
 	if telefone == "" {
@@ -89,65 +94,65 @@ func validateNumericPhone(telefone string) error {
 		return errors.New("o telefone deve conter apenas números (dígitos de 0 a 9)")
 	}
 
-	if len(telefone) < 8 || len(telefone) > 15 {
-	    return errors.New("o telefone tem um comprimento inválido")
+	if len(telefone) < 8 || len(telefone) > 10 {
+		return errors.New("o telefone tem um comprimento inválido")
 	}
 
 	return nil
 }
 
-func NewAdmin(nome, telefone, senha string) (*Usuario,error) {
+func NewAdmin(nome, telefone, senha string) (*Usuario, error) {
 	if nome == "" {
-        return nil, errors.New("nome não pode ser vazio")
-    }
+		return nil, errors.New("nome não pode ser vazio")
+	}
 	if err := validateNumericPhone(telefone); err != nil {
 		return nil, err
 	}
 	if len([]byte(senha)) < 6 {
-        return nil, errors.New("senha não pode ter menos de 6 letras")
-    }
+		return nil, errors.New("senha não pode ter menos de 6 letras")
+	}
 
-    if len([]byte(senha)) > 100 {
-        return nil, errors.New("senha não pode ter mais de 60 letras")
-    }
-    senhaHash, err := argon2id.CreateHash(senha, params)
-    if err != nil {
-        log.Fatal(err)
-        return nil, err
-    }
+	if len([]byte(senha)) > 100 {
+		return nil, errors.New("senha não pode ter mais de 60 letras")
+	}
+	senhaHash, err := argon2id.CreateHash(senha, params)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
 	usuario := &Usuario{
-		Nome: nome,
-		Telefone: telefone,
-		Senha: senhaHash,
+		Nome:            nome,
+		Telefone:        telefone,
+		Senha:           senhaHash,
 		RolePermissaoID: 3,
 	}
 	return usuario, nil
 }
 
-func NewCliente(nome, telefone, senha, imagemURL string) (*Cliente,error) {
+func NewCliente(nome, telefone, senha, imagemURL string) (*Cliente, error) {
 	if nome == "" {
-        return nil, errors.New("nome não pode ser vazio")
-    }
+		return nil, errors.New("nome não pode ser vazio")
+	}
 	if err := validateNumericPhone(telefone); err != nil {
 		return nil, err
 	}
 	if len([]byte(senha)) < 6 {
-        return nil, errors.New("senha não pode ter menos de 6 letras")
-    }
+		return nil, errors.New("senha não pode ter menos de 6 letras")
+	}
 
-    if len([]byte(senha)) > 100 {
-        return nil, errors.New("senha não pode ter mais de 60 letras")
-    }
-    senhaHash, err := argon2id.CreateHash(senha, params)
-    if err != nil {
-        log.Fatal(err)
-        return nil, err
-    }
+	if len([]byte(senha)) > 100 {
+		return nil, errors.New("senha não pode ter mais de 60 letras")
+	}
+	senhaHash, err := argon2id.CreateHash(senha, params)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
 	cliente := &Cliente{
 		Usuario: Usuario{
-			Nome: nome,
-			Telefone: telefone,
-			Senha: senhaHash,
+			Nome:            nome,
+			Telefone:        telefone,
+			Senha:           senhaHash,
 			RolePermissaoID: 1,
 		},
 		Nome:      nome,
@@ -157,30 +162,30 @@ func NewCliente(nome, telefone, senha, imagemURL string) (*Cliente,error) {
 	return cliente, nil
 }
 
-func NewPrestador(localizacao string, latitude, longitude float64, nome string, telefone, senha, imagemURL string) (*Prestador,error) {
+func NewPrestador(localizacao string, latitude, longitude float64, nome string, telefone, senha, imagemURL string) (*Prestador, error) {
 	if nome == "" {
-        return nil, errors.New("nome não pode ser vazio")
-    }
+		return nil, errors.New("nome não pode ser vazio")
+	}
 	if err := validateNumericPhone(telefone); err != nil {
 		return nil, err
 	}
 	if len([]byte(senha)) < 6 {
-        return nil, errors.New("senha não pode ter menos de 6 letras")
-    }
+		return nil, errors.New("senha não pode ter menos de 6 letras")
+	}
 
-    if len([]byte(senha)) > 100 {
-        return nil, errors.New("senha não pode ter mais de 60 letras")
-    }
-    senhaHash, err := argon2id.CreateHash(senha, params)
-    if err != nil {
-        log.Fatal(err)
-        return nil, err
-    }
+	if len([]byte(senha)) > 100 {
+		return nil, errors.New("senha não pode ter mais de 60 letras")
+	}
+	senhaHash, err := argon2id.CreateHash(senha, params)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
 	prestador := &Prestador{
 		Usuario: Usuario{
-			Nome: nome,
-			Telefone: telefone,
-			Senha: senhaHash,
+			Nome:            nome,
+			Telefone:        telefone,
+			Senha:           senhaHash,
 			RolePermissaoID: 2,
 		},
 		Nome:             nome,

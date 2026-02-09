@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"mime"
+
 	// "mime/multipart"
 	"net/http"
 	"strconv"
+
 	// "sync"
 	"time"
 
@@ -47,22 +49,36 @@ func (h *CatalogoHandler) Criar(c *gin.Context) {
 	}
 
 	g, ctx := errgroup.WithContext(c.Request.Context())
-	type result struct { idx int; url string }
+	type result struct {
+		idx int
+		url string
+	}
 	resCh := make(chan result, len(files))
 
 	for i, file := range files {
 		i := i
 		file := file
 		g.Go(func() error {
+			// Validação rigorosa da imagem
+			if err := pkg.ValidateImage(file); err != nil {
+				return err
+			}
+
 			comp, format, err := pkg.CompressImage(file, 150)
-			if err != nil { return fmt.Errorf("compress: %w", err) }
+			if err != nil {
+				return fmt.Errorf("compress: %w", err)
+			}
 
 			fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
 			contentType := mime.TypeByExtension("." + format)
-			if contentType == "" { contentType = "application/octet-stream" }
+			if contentType == "" {
+				contentType = "application/octet-stream"
+			}
 
 			_, uploadedFileName, err := h.uploader.UploadFromReader(ctx, bytes.NewReader(comp.Bytes()), fileName, contentType)
-			if err != nil { return fmt.Errorf("upload: %w", err) }
+			if err != nil {
+				return fmt.Errorf("upload: %w", err)
+			}
 
 			resCh <- result{idx: i, url: h.uploader.GetPublicURL("serviceja-image", uploadedFileName)}
 			return nil
@@ -86,7 +102,6 @@ func (h *CatalogoHandler) Criar(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 
 	prestadorID, err := getUsuarioID(c)
 	if err != nil {

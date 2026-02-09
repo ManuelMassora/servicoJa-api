@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func Auth() gin.HandlerFunc {
+func Auth(jwtService *JwtService) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		const Bearer_schema = "Bearer "
 		header := context.GetHeader("Authorization")
@@ -20,7 +20,6 @@ func Auth() gin.HandlerFunc {
 		}
 		tokenString := header[len(Bearer_schema):]
 
-		jwtService := NewJWTService()
 		claim, isValid := jwtService.ValidateToken(tokenString)
 
 		if !isValid {

@@ -11,9 +11,9 @@ type JwtService struct {
 	issure    string
 }
 
-func NewJWTService() *JwtService {
+func NewJWTService(secretKey string) *JwtService {
 	return &JwtService{
-		secretKey: "secret-key",
+		secretKey: secretKey,
 		issure:    "marketplace-api",
 	}
 }

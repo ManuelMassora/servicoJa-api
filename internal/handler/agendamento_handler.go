@@ -35,7 +35,7 @@ func (h *AgendamentoHandler) Criar(c *gin.Context) {
 	}
 
 	form, err := c.MultipartForm()
-	
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Erro ao processar formulário multipart: " + err.Error()})
 		return
@@ -55,6 +55,12 @@ func (h *AgendamentoHandler) Criar(c *gin.Context) {
 		wg.Add(1)
 		go func(fileHeader *multipart.FileHeader) {
 			defer wg.Done()
+
+			// Validação rigorosa da imagem
+			if err := pkg.ValidateImage(fileHeader); err != nil {
+				errCh <- err
+				return
+			}
 
 			compressedBuf, format, err := pkg.CompressImage(fileHeader, 150)
 			if err != nil {

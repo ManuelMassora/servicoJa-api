@@ -33,6 +33,34 @@ func (r *PagamentoRepository) BuscarPorServico(ctx context.Context, idServico ui
 	return &pagamento, nil
 }
 
+func (r *PagamentoRepository) BuscarPorVaga(ctx context.Context, idVaga uint) (*model.Pagamento, error) {
+	var pagamento model.Pagamento
+	err := r.db.WithContext(ctx).
+		Preload("Vaga").
+		Preload("Cliente").
+		Preload("Prestador").
+		Where("id_vaga = ?", idVaga).
+		First(&pagamento).Error
+	if err != nil {
+		return nil, err
+	}
+	return &pagamento, nil
+}
+
+func (r *PagamentoRepository) BuscarPorAgendamento(ctx context.Context, idAgendamento uint) (*model.Pagamento, error) {
+	var pagamento model.Pagamento
+	err := r.db.WithContext(ctx).
+		Preload("Agendamento").
+		Preload("Cliente").
+		Preload("Prestador").
+		Where("id_agendamento = ?", idAgendamento).
+		First(&pagamento).Error
+	if err != nil {
+		return nil, err
+	}
+	return &pagamento, nil
+}
+
 func (r *PagamentoRepository) AtualizarStatus(ctx context.Context, id uint, status model.Status) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Pagamento{}).
@@ -48,17 +76,14 @@ func (r *PagamentoRepository) ListarPorUsuario(ctx context.Context, idUsuario ui
 		Preload("Prestador").
 		Where("id_cliente = ? OR id_prestador = ?", idUsuario, idUsuario)
 
-	
 	for key, value := range filters {
 		query = query.Where(key+" = ?", value)
 	}
 
-	
 	if orderBy != "" {
 		query = query.Order(orderBy + " " + orderDir)
 	}
 
-	
 	err := query.Limit(limit).Offset(offset).Find(&pagamentos).Error
 	if err != nil {
 		return nil, err

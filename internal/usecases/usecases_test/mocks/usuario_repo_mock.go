@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"github.com/stretchr/testify/mock"
@@ -9,6 +10,16 @@ import (
 
 type MockUsuarioRepo struct {
 	mock.Mock
+}
+
+func (m *MockUsuarioRepo) IncrementarCancelamentos(ctx context.Context, id uint) (uint, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(uint), args.Error(1)
+}
+
+func (m *MockUsuarioRepo) SuspenderUsuario(ctx context.Context, id uint, ate time.Time) error {
+	args := m.Called(ctx, id, ate)
+	return args.Error(0)
 }
 
 func (m *MockUsuarioRepo) Criar(ctx context.Context, usuario *model.Usuario) error {

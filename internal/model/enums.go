@@ -4,16 +4,17 @@ package model
 type Status string
 
 const (
-	StatusPendente   	Status = "PENDENTE"
-	StatusEmAndamento 	Status = "EM_ANDAMENTO"
-	StatusConcluido   	Status = "CONCLUIDO"
-	StatusCancelado   	Status = "CANCELADO"
-	StatusDisponivel  	Status = "DISPONIVEL"
-	StatusOcupada  	  	Status = "OCUPADA"
-	StatusAceito	  	Status = "ACEITO"
-	StatusRejeitado	  	Status = "REJEITADO"
-	StatusProposta	  	Status = "PROPOSTA"
-	StatusConfirmado	Status = "CONFIRMADO"
+	StatusPendente            Status = "PENDENTE"
+	StatusEmAndamento         Status = "EM_ANDAMENTO"
+	StatusConcluido           Status = "CONCLUIDO"
+	StatusCancelado           Status = "CANCELADO"
+	StatusDisponivel          Status = "DISPONIVEL"
+	StatusOcupada             Status = "OCUPADA"
+	StatusAceito              Status = "ACEITO"
+	StatusRejeitado           Status = "REJEITADO"
+	StatusProposta            Status = "PROPOSTA"
+	StatusConfirmado          Status = "CONFIRMADO"
+	StatusAguardandoPagamento Status = "AGUARDANDO_PAGAMENTO"
 )
 
 // Tipo de movimento financeiro
@@ -28,9 +29,9 @@ const (
 type MetodoPagamento string
 
 const (
-	MetodoMPesa  MetodoPagamento = "M_PESA"
+	MetodoMPesa    MetodoPagamento = "M_PESA"
 	MetodoCarteira MetodoPagamento = "CARTEIRA"
-	MetodoOutro   MetodoPagamento = "OUTRO"
+	MetodoOutro    MetodoPagamento = "OUTRO"
 )
 
 // Função (Role) do usuário no sistema

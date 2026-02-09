@@ -52,16 +52,22 @@ func (h *UsuarioHandler) CriarCliente(c *gin.Context) {
 	}
 
 	if file != nil {
+		// Validação rigorosa da imagem
+		if err := pkg.ValidateImage(file); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
+			return
+		}
+
 		// COMPRIME AUTOMATICAMENTE para no máximo ~300 KB
 		compressedBuf, format, err := pkg.CompressImage(file, 100) // ← 300 KB máximo
 		if err != nil {
-			c.JSON(500, gin.H{"erro": "falha ao processar imagem"})
+			c.JSON(http.StatusInternalServerError, gin.H{"erro": "falha ao processar imagem"})
 			return
 		}
 
 		// Gera um nome de arquivo único
 		fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
-		
+
 		// Determina o Content-Type
 		contentType := mime.TypeByExtension("." + format)
 		if contentType == "" {
@@ -78,7 +84,6 @@ func (h *UsuarioHandler) CriarCliente(c *gin.Context) {
 		request.ImagemURL = h.uploader.GetPublicURL("serviceja-image", fileName)
 	}
 
-
 	if err := h.uc.CriarCliente(c.Request.Context(), request); err != nil {
 		c.JSON(400, gin.H{"erro": "ao salvar cliente, " + err.Error()})
 		return
@@ -89,12 +94,12 @@ func (h *UsuarioHandler) CriarCliente(c *gin.Context) {
 func (h *UsuarioHandler) CriarPrestador(c *gin.Context) {
 	var request usecases.PrestadorRequest
 	if err := c.ShouldBindWith(&request, binding.FormMultipart); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{
-            "erro":    "falha ao processar formulário",
-            "detalhe": err.Error(),
-        })
-        return
-    }
+		c.JSON(http.StatusBadRequest, gin.H{
+			"erro":    "falha ao processar formulário",
+			"detalhe": err.Error(),
+		})
+		return
+	}
 
 	file, err := c.FormFile("imagem")
 	if err != nil && err != http.ErrMissingFile {
@@ -103,15 +108,21 @@ func (h *UsuarioHandler) CriarPrestador(c *gin.Context) {
 	}
 
 	if file != nil {
+		// Validação rigorosa da imagem
+		if err := pkg.ValidateImage(file); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
+			return
+		}
+
 		compressedBuf, format, err := pkg.CompressImage(file, 100)
 		if err != nil {
-			c.JSON(500, gin.H{"erro": "falha ao processar imagem"})
+			c.JSON(http.StatusInternalServerError, gin.H{"erro": "falha ao processar imagem"})
 			return
 		}
 
 		// Gera um nome de arquivo único
 		fileName := fmt.Sprintf("%d.%s", time.Now().UnixNano(), format)
-		
+
 		// Determina o Content-Type
 		contentType := mime.TypeByExtension("." + format)
 		if contentType == "" {
@@ -164,6 +175,12 @@ func (h *UsuarioHandler) EditarPrestador(c *gin.Context) {
 	}
 
 	if file != nil {
+		// Validação rigorosa da imagem
+		if err := pkg.ValidateImage(file); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
+			return
+		}
+
 		compressedBuf, format, err := pkg.CompressImage(file, 100)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"erro": "falha ao processar imagem"})

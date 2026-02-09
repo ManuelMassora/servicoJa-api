@@ -15,6 +15,7 @@ type ServicoUseCase struct {
 	vagaRepo        model.VagaRepo
 	notificacaoRepo model.NotificacaoRepo
 	usuarioRepo     model.UsuarioRepo
+	pagamentoUC     *PagamentoUseCase
 }
 
 type ServicoResponse struct {
@@ -35,13 +36,14 @@ type ServicoResponse struct {
 	SeAvaliado     bool      `json:"se_avaliado"`
 }
 
-func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo) *ServicoUseCase {
+func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo, pagamentoUC *PagamentoUseCase) *ServicoUseCase {
 	return &ServicoUseCase{
 		r:               r,
 		agendamentoRepo: agendamentoRepo,
 		vagaRepo:        vagaRepo,
 		notificacaoRepo: notificacaoRepo,
 		usuarioRepo:     usuarioRepo,
+		pagamentoUC:     pagamentoUC,
 	}
 }
 
@@ -107,7 +109,15 @@ func (uc *ServicoUseCase) ConfirmarServico(ctx context.Context, idServico, idUsu
 	}
 	servico.Status = model.StatusConfirmado
 	servico.DataHoraConfirmado = time.Now().UTC()
-	return uc.r.Atualizar(ctx, servico)
+	err = uc.r.Atualizar(ctx, servico)
+	if err != nil {
+		return err
+	}
+
+	// Pagar ao prestador
+	_ = uc.pagamentoUC.ProcessarPagamentoPrestador(ctx, servico.ID)
+
+	return nil
 }
 
 func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsuario uint) error {
@@ -139,6 +149,10 @@ func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsua
 	if err != nil {
 		return err
 	}
+
+	// Devolver ao cliente e punir quem cancelou
+	_ = uc.pagamentoUC.ProcessarCancelamentoComReembolso(ctx, servico.ID, idUsuario)
+
 	return nil
 }
 

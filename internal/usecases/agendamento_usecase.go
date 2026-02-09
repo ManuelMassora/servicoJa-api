@@ -15,6 +15,8 @@ type AgendamentoUC struct {
 	notifacaoRepo   model.NotificacaoRepo
 	usuarioRepo     model.UsuarioRepo
 	anexoImagemRepo model.AnexoImagemRepo
+	pagamentoRepo   model.PagamentoRepo
+	pagamentoUC     *PagamentoUseCase
 }
 
 func NewAgendamentoUC(
@@ -24,6 +26,8 @@ func NewAgendamentoUC(
 	notifacaoRepo model.NotificacaoRepo,
 	usuarioRepo model.UsuarioRepo,
 	anexoImagemRepo model.AnexoImagemRepo,
+	pagamentoRepo model.PagamentoRepo,
+	pagamentoUC *PagamentoUseCase,
 ) *AgendamentoUC {
 	return &AgendamentoUC{r: r,
 		catalogoRepo:    catalogoRepo,
@@ -31,17 +35,20 @@ func NewAgendamentoUC(
 		notifacaoRepo:   notifacaoRepo,
 		usuarioRepo:     usuarioRepo,
 		anexoImagemRepo: anexoImagemRepo,
+		pagamentoRepo:   pagamentoRepo,
+		pagamentoUC:     pagamentoUC,
 	}
 }
 
 type AgendamentoRequest struct {
-	Detalhe     string    `json:"detalhe" form:"detalhe" binding:"required"`
-	IDCatalogo  uint      `json:"id_catalogo" form:"id_catalogo" binding:"required"`
-	DataHora    time.Time `json:"datahora" form:"datahora" binding:"required"`
-	Localizacao string    `json:"localizacao" form:"localizacao" binding:"required"`
-	Latitude    float64   `json:"latitude" form:"latitude" binding:"required"`
-	Longitude   float64   `json:"longitude" form:"longitude" binding:"required"`
-	Anexos      []string  `binding:"-"`
+	Detalhe           string    `json:"detalhe" form:"detalhe" binding:"required"`
+	IDCatalogo        uint      `json:"id_catalogo" form:"id_catalogo" binding:"required"`
+	DataHora          time.Time `json:"datahora" form:"datahora" binding:"required"`
+	Localizacao       string    `json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude          float64   `json:"latitude" form:"latitude" binding:"required"`
+	Longitude         float64   `json:"longitude" form:"longitude" binding:"required"`
+	Anexos            []string  `binding:"-"`
+	TelefonePagamento string    `json:"telefone_pagamento" form:"telefone_pagamento" binding:"required"`
 }
 
 type AgendamentoResponse struct {
@@ -79,6 +86,15 @@ type PrestadorAgendamentosResponse struct {
 }
 
 func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) error {
+	usuario, err := uc.usuarioRepo.BuscarPorID(ctx, idCliente)
+	if err != nil {
+		return err
+	}
+
+	if usuario.SuspensoAte != nil && usuario.SuspensoAte.After(time.Now()) {
+		return errors.New("sua conta está suspensa até " + usuario.SuspensoAte.Format("02/01/2006 15:04"))
+	}
+
 	catalogo, err := uc.catalogoRepo.FindByID(ctx, req.IDCatalogo)
 	if err != nil {
 		return err
@@ -89,7 +105,7 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 		IDCatalogo:  req.IDCatalogo,
 		IDCliente:   idCliente,
 		DataHora:    req.DataHora,
-		Status:      "PENDENTE",
+		Status:      string(model.StatusAguardandoPagamento),
 		Localizacao: req.Localizacao,
 		Latitude:    req.Latitude,
 		Longitude:   req.Longitude,
@@ -99,6 +115,20 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 	if err != nil {
 		return err
 	}
+
+	// Criar registro de pagamento pendente
+	pagamento := &model.Pagamento{
+		IDAgendamento: &agendamento.ID,
+		IDCliente:     idCliente,
+		Valor:         catalogo.ValorFixo,
+		Status:        model.StatusPendente, // Esperando C2B
+	}
+	if err := uc.pagamentoRepo.Criar(ctx, pagamento); err != nil {
+		return err
+	}
+
+	// Iniciar o processo de pagamento via M-Pesa
+	_ = uc.pagamentoUC.IniciarPagamentoC2B(ctx, pagamento.ID, req.TelefonePagamento)
 
 	for _, anexoURL := range req.Anexos {
 		anexo := &model.AnexoImagem{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"gorm.io/gorm"
@@ -50,6 +51,24 @@ func (r *UsuarioRepository) ZerarNotificacoesNovas(ctx context.Context, id uint)
 	}
 	usuario.NotificacoesNovas = 0
 	return r.db.WithContext(ctx).Save(&usuario).Error
+}
+
+func (r *UsuarioRepository) IncrementarCancelamentos(ctx context.Context, id uint) (uint, error) {
+	var usuario model.Usuario
+	err := r.db.WithContext(ctx).First(&usuario, id).Error
+	if err != nil {
+		return 0, err
+	}
+	usuario.CancelamentosCount++
+	err = r.db.WithContext(ctx).Save(&usuario).Error
+	return usuario.CancelamentosCount, err
+}
+
+func (r *UsuarioRepository) SuspenderUsuario(ctx context.Context, id uint, ate time.Time) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Usuario{}).
+		Where("id = ?", id).
+		Update("suspenso_ate", ate).Error
 }
 
 func (r *UsuarioRepository) BuscarPorTelefone(ctx context.Context, telefone string) (*model.Usuario, error) {

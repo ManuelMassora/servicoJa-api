@@ -44,6 +44,12 @@ func (h *VagaHandler) CriarVaga(c *gin.Context) {
 	}
 
 	for _, file := range files {
+		// Validação rigorosa da imagem
+		if err := pkg.ValidateImage(file); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		compressedBuf, format, err := pkg.CompressImage(file, 150)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao processar imagem para upload: " + err.Error()})

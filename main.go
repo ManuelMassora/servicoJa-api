@@ -10,14 +10,11 @@ import (
 	"github.com/ManuelMassora/servicoJa-api/internal/config"
 	"github.com/ManuelMassora/servicoJa-api/internal/db"
 	"github.com/ManuelMassora/servicoJa-api/internal/di"
+	"github.com/ManuelMassora/servicoJa-api/internal/middleware"
 	"github.com/ManuelMassora/servicoJa-api/internal/routes"
 	"github.com/gin-gonic/gin"
 	// "github.com/markbates/goth/gothic"
 )
-
-// type appConfig struct {
-// 	*config.Config
-// }
 
 func main() {
 	cfg, err := config.LoadConfig(".env")
@@ -26,6 +23,7 @@ func main() {
 	}
 
 	server := gin.Default()
+	jwtService := middleware.NewJWTService(cfg.JwtSecretKey)
 
 	// server.Use(cors.New(cors.Config{
 	// 	AllowOrigins:     []string{"http://localhost:5173", "http://127.0.0.1:5173"},
@@ -43,8 +41,8 @@ func main() {
 	sqlDB, _ := db.DB()
 	defer sqlDB.Close()
 
-	container := di.NewContainer(db, cfg)
-	routes.SetRoutes(server, container)
+	container := di.NewContainer(db, cfg, jwtService)
+	routes.SetRoutes(server, container, jwtService)
 
 	if err := server.Run(cfg.ServerHost + ":" + cfg.ServerPort); err != nil {
 		log.Fatalf("Erro ao iniciar o servidor: %v", err)

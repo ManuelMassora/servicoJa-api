@@ -11,40 +11,53 @@ import (
 type VagaUseCase struct {
 	vagaRepo        model.VagaRepo
 	anexoImagemRepo model.AnexoImagemRepo
+	usuarioRepo     model.UsuarioRepo
+	pagamentoRepo   model.PagamentoRepo
+	pagamentoUC     *PagamentoUseCase
 }
 
-func NewVagaUseCase(vagaRepo model.VagaRepo, anexoImagemRepo model.AnexoImagemRepo) *VagaUseCase {
-	return &VagaUseCase{vagaRepo: vagaRepo, anexoImagemRepo: anexoImagemRepo}
+func NewVagaUseCase(vagaRepo model.VagaRepo, anexoImagemRepo model.AnexoImagemRepo, usuarioRepo model.UsuarioRepo, pagamentoRepo model.PagamentoRepo, pagamentoUC *PagamentoUseCase) *VagaUseCase {
+	return &VagaUseCase{vagaRepo: vagaRepo, anexoImagemRepo: anexoImagemRepo, usuarioRepo: usuarioRepo, pagamentoRepo: pagamentoRepo, pagamentoUC: pagamentoUC}
 }
 
 type VagaRequest struct {
-	Titulo      string   `json:"titulo" form:"titulo" binding:"required"`
-	Descricao   string   `json:"descricao" form:"descricao" binding:"required"`
-	Localizacao string   `json:"localizacao" form:"localizacao" binding:"required"`
-	Latitude    float64  `json:"latitude" form:"latitude" binding:"required"`
-	Longitude   float64  `json:"longitude" form:"longitude" binding:"required"`
-	Preco       float64  `json:"preco" form:"preco" binding:"required,gte=0"`
-	Urgente     bool     `json:"urgente" form:"urgente"`
-	Anexos      []string `binding:"-"`
+	Titulo            string   `json:"titulo" form:"titulo" binding:"required"`
+	Descricao         string   `json:"descricao" form:"descricao" binding:"required"`
+	Localizacao       string   `json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude          float64  `json:"latitude" form:"latitude" binding:"required"`
+	Longitude         float64  `json:"longitude" form:"longitude" binding:"required"`
+	Preco             float64  `json:"preco" form:"preco" binding:"required,gte=0"`
+	Urgente           bool     `json:"urgente" form:"urgente"`
+	Anexos            []string `binding:"-"`
+	TelefonePagamento string   `json:"telefone_pagamento" form:"telefone_pagamento" binding:"required"`
 }
 
 type VagaResponse struct {
-	ID          uint    `json:"id"`
-	Titulo      string  `json:"titulo"`
-	Descricao   string  `json:"descricao"`
-	Localizacao string  `json:"localizacao"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Status      string 	`json:"status"`
-	Preco       float64 `json:"preco"`
-	Urgente     bool    `json:"urgente"`
-	Cliente    	string  `json:"cliente"`
-	DataCriacao string  `json:"data_criacao"`
-	Anexos      []string `json:"anexos"`
-	PropostasNovas uint    `json:"propostas_novas,omitempty"`
+	ID             uint     `json:"id"`
+	Titulo         string   `json:"titulo"`
+	Descricao      string   `json:"descricao"`
+	Localizacao    string   `json:"localizacao"`
+	Latitude       float64  `json:"latitude"`
+	Longitude      float64  `json:"longitude"`
+	Status         string   `json:"status"`
+	Preco          float64  `json:"preco"`
+	Urgente        bool     `json:"urgente"`
+	Cliente        string   `json:"cliente"`
+	DataCriacao    string   `json:"data_criacao"`
+	Anexos         []string `json:"anexos"`
+	PropostasNovas uint     `json:"propostas_novas,omitempty"`
 }
 
-func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) error {
+func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) error {
+	usuario, err := uc.usuarioRepo.BuscarPorID(ctx, idUsuario)
+	if err != nil {
+		return err
+	}
+
+	if usuario.SuspensoAte != nil && usuario.SuspensoAte.After(time.Now()) {
+		return errors.New("sua conta está suspensa até " + usuario.SuspensoAte.Format("02/01/2006 15:04"))
+	}
+
 	vaga := &model.Vaga{
 		Titulo:      req.Titulo,
 		Descricao:   req.Descricao,
@@ -52,13 +65,27 @@ func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario 
 		Latitude:    req.Latitude,
 		Longitude:   req.Longitude,
 		Preco:       req.Preco,
-		Status:      model.StatusDisponivel,
+		Status:      model.StatusAguardandoPagamento,
 		IDCliente:   idUsuario,
 		Urgente:     req.Urgente,
 	}
 	if err := uc.vagaRepo.Criar(ctx, vaga); err != nil {
 		return err
 	}
+
+	// Criar registro de pagamento pendente
+	pagamento := &model.Pagamento{
+		IDVaga:    &vaga.ID,
+		IDCliente: idUsuario,
+		Valor:     vaga.Preco,
+		Status:    model.StatusPendente, // Esperando C2B
+	}
+	if err := uc.pagamentoRepo.Criar(ctx, pagamento); err != nil {
+		return err
+	}
+
+	// Iniciar o processo de pagamento via M-Pesa
+	_ = uc.pagamentoUC.IniciarPagamentoC2B(ctx, pagamento.ID, req.TelefonePagamento)
 
 	for _, anexoURL := range req.Anexos {
 		anexo := &model.AnexoImagem{
@@ -74,7 +101,7 @@ func(uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario 
 	return nil
 }
 
-func(uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) error {
+func (uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) error {
 	vaga, err := uc.vagaRepo.BuscarPorID(ctx, id)
 	if err != nil {
 		return err
@@ -88,7 +115,7 @@ func(uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) erro
 	return uc.vagaRepo.Salvar(ctx, vaga)
 }
 
-func(uc *VagaUseCase) BuscarPorIDIfCliente(ctx context.Context, id, idUsuario uint) (*VagaResponse, error) {
+func (uc *VagaUseCase) BuscarPorIDIfCliente(ctx context.Context, id, idUsuario uint) (*VagaResponse, error) {
 	vaga, err := uc.vagaRepo.BuscarPorID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -105,23 +132,23 @@ func(uc *VagaUseCase) BuscarPorIDIfCliente(ctx context.Context, id, idUsuario ui
 		urls = append(urls, anexo.URL)
 	}
 	return &VagaResponse{
-		ID:          vaga.ID,
-		Titulo:      vaga.Titulo,
-		Descricao:   vaga.Descricao,
-		Localizacao: vaga.Localizacao,
-		Latitude:    vaga.Latitude,
-		Longitude:   vaga.Longitude,
-		Status:      string(vaga.Status),
-		Preco:       vaga.Preco,
-		Urgente:     vaga.Urgente,
-		Cliente:     vaga.Cliente.Nome,
-		DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
-		Anexos: urls,
+		ID:             vaga.ID,
+		Titulo:         vaga.Titulo,
+		Descricao:      vaga.Descricao,
+		Localizacao:    vaga.Localizacao,
+		Latitude:       vaga.Latitude,
+		Longitude:      vaga.Longitude,
+		Status:         string(vaga.Status),
+		Preco:          vaga.Preco,
+		Urgente:        vaga.Urgente,
+		Cliente:        vaga.Cliente.Nome,
+		DataCriacao:    vaga.CreatedAt.Format("2006-01-02 15:04:05"),
+		Anexos:         urls,
 		PropostasNovas: vaga.CountPropostas,
 	}, nil
 }
 
-func(uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
+func (uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
 	vagas, err := uc.vagaRepo.ListarDisponiveis(ctx, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -158,13 +185,13 @@ func(uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[st
 			Urgente:     vaga.Urgente,
 			Cliente:     clienteNome,
 			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
-			Anexos: urls,
+			Anexos:      urls,
 		})
 	}
 	return resp, nil
 }
 
-func(uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
+func (uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
 	vagas, err := uc.vagaRepo.ListarPorCliente(ctx, idUsuario, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -190,25 +217,25 @@ func(uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, filt
 		}
 		urls := anexosPorVagaMap[vaga.ID]
 		resp = append(resp, VagaResponse{
-			ID:          vaga.ID,
-			Titulo:      vaga.Titulo,
-			Descricao:   vaga.Descricao,
-			Localizacao: vaga.Localizacao,
-			Latitude:    vaga.Latitude,
-			Longitude:   vaga.Longitude,
-			Status:      string(vaga.Status),
-			Preco:       vaga.Preco,
-			Urgente:     vaga.Urgente,
-			Cliente:     clienteNome,
-			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
-			Anexos: urls,
+			ID:             vaga.ID,
+			Titulo:         vaga.Titulo,
+			Descricao:      vaga.Descricao,
+			Localizacao:    vaga.Localizacao,
+			Latitude:       vaga.Latitude,
+			Longitude:      vaga.Longitude,
+			Status:         string(vaga.Status),
+			Preco:          vaga.Preco,
+			Urgente:        vaga.Urgente,
+			Cliente:        clienteNome,
+			DataCriacao:    vaga.CreatedAt.Format("2006-01-02 15:04:05"),
+			Anexos:         urls,
 			PropostasNovas: vaga.CountPropostas,
 		})
 	}
 	return resp, nil
 }
 
-func(uc *VagaUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
+func (uc *VagaUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]VagaResponse, error) {
 	vagas, err := uc.vagaRepo.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -245,7 +272,7 @@ func(uc *VagaUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longit
 			Urgente:     vaga.Urgente,
 			Cliente:     clienteNome,
 			DataCriacao: vaga.CreatedAt.Format("2006-01-02 15:04:05"),
-			Anexos: urls,
+			Anexos:      urls,
 		})
 	}
 	return resp, nil

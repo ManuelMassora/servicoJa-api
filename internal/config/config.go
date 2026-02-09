@@ -9,11 +9,15 @@ import (
 )
 
 type Config struct {
-	DatabaseDSN        string
-	ServerPort         string
-	ServerHost         string
-	SupabaseURL        string
-	SupabaseKey        string
+	DatabaseDSN      string
+	ServerPort       string
+	ServerHost       string
+	SupabaseURL      string
+	SupabaseKey      string
+	JwtSecretKey	 string
+	MpesaAppKey		 string
+	MpesaAppSecret	 string
+	MpesaShortCode	 string
 }
 
 func LoadConfig(envPath string) (*Config, error) {
@@ -32,21 +36,29 @@ func LoadConfig(envPath string) (*Config, error) {
 	serverHost := os.Getenv("SERVER_HOST")
 	supabaseURL := os.Getenv("SUPABASE_URL")
 	supabaseKey := os.Getenv("SUPABASE_SERVICE_KEY")
+	jwtSecretKey := os.Getenv("JWT_SECRET")
+	mpesaAppKey := os.Getenv("MPESA_APP_KEY")
+	mpesaAppSecret := os.Getenv("MPESA_APP_SECRET")
+	mpesaShortCode := os.Getenv("MPESA_SHORT_CODE")
 
 	if dbDSN == "" {
 		return nil, fmt.Errorf("DATABASE_DSN environment variable is not set")
 	}
 
-	if supabaseURL == "" || supabaseKey == "" {
-		return nil, fmt.Errorf("SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables must be set")
+	if supabaseURL == "" || supabaseKey == "" || jwtSecretKey == "" {
+		return nil, fmt.Errorf("SUPABASE_URL and SUPABASE_SERVICE_KEY and JWT_SECRET environment variables must be set")
 	}
 
 	cfg := &Config{
-		DatabaseDSN:        dbDSN,
-		ServerPort:         serverPort,
-		ServerHost:         serverHost,
-		SupabaseURL:        supabaseURL,
-		SupabaseKey:        supabaseKey,
+		DatabaseDSN:      dbDSN,
+		ServerPort:       serverPort,
+		ServerHost:       serverHost,
+		SupabaseURL:      supabaseURL,
+		SupabaseKey:      supabaseKey,
+		JwtSecretKey:     jwtSecretKey,
+		MpesaAppKey:      mpesaAppKey,
+		MpesaAppSecret:   mpesaAppSecret,
+		MpesaShortCode:   mpesaShortCode,
 	}
 	return cfg, nil
 }

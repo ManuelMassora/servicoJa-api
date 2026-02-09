@@ -56,13 +56,21 @@ func (h *GaleriaHandler) CriarGaleria(c *gin.Context) {
 	}
 
 	g, ctx := errgroup.WithContext(c.Request.Context())
-	type result struct{ idx int; url string }
+	type result struct {
+		idx int
+		url string
+	}
 	resCh := make(chan result, len(files))
 
 	for i, file := range files {
 		i := i
 		file := file
 		g.Go(func() error {
+			// Validação rigorosa da imagem
+			if err := pkg.ValidateImage(file); err != nil {
+				return err
+			}
+
 			comp, format, err := pkg.CompressImage(file, 150)
 			if err != nil {
 				return fmt.Errorf("compress: %w", err)
