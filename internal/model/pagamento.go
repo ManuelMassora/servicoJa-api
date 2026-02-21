@@ -12,17 +12,22 @@ type Pagamento struct {
 	Agendamento   *Agendamento `gorm:"foreignKey:IDAgendamento;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"agendamento,omitempty"`
 	IDCliente     uint         `json:"cliente_id" gorm:"not null"`
 	Cliente       *Usuario     `gorm:"foreignKey:IDCliente;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"cliente,omitempty"`
-	IDPrestador   *uint        `json:"prestador_id" gorm:"default:null"`
+	IDPrestador   *uint        `json:"prestador_id"`
 	Prestador     *Usuario     `gorm:"foreignKey:IDPrestador;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"prestador,omitempty"`
 	Valor         float64      `json:"valor" gorm:"not null"`
 	Status        Status       `json:"status" gorm:"column:status;type:varchar(20);not null"`
+	Referencia    string       `json:"referencia"`
 }
 
 type PagamentoRepo interface {
 	Criar(ctx context.Context, pagamento *Pagamento) error
+	BuscarPorID(ctx context.Context, id uint) (*Pagamento, error)
+	BuscarPorReferencia(ctx context.Context, referencia string) (*Pagamento, error)
 	BuscarPorServico(ctx context.Context, idServico uint) (*Pagamento, error)
 	BuscarPorVaga(ctx context.Context, idVaga uint) (*Pagamento, error)
 	BuscarPorAgendamento(ctx context.Context, idAgendamento uint) (*Pagamento, error)
 	AtualizarStatus(ctx context.Context, id uint, status Status) error
+	AtualizarStatusPorReferencia(ctx context.Context, referencia string, status Status) error
+	AtualizarIDServico(ctx context.Context, idPagamento uint, idServico uint) error
 	ListarPorUsuario(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]Pagamento, error)
 }

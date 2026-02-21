@@ -16,8 +16,12 @@ func NewAgendamentoRepo(db *gorm.DB) model.AgendamentoRepo {
 	return &AgendamentoRepo{db: db}
 }
 
-func (r *AgendamentoRepo) Criar(ctx context.Context, agendamento *model.Agendamento) error {
-	return r.db.WithContext(ctx).Create(agendamento).Error
+func (r *AgendamentoRepo) Criar(ctx context.Context, agendamento *model.Agendamento) (*model.Agendamento, error) {
+	err := r.db.WithContext(ctx).Create(agendamento).Error
+	if err != nil {
+		return nil, err
+	}
+	return agendamento, nil
 }
 func (r *AgendamentoRepo) BuscarPorID(ctx context.Context, id uint) (*model.Agendamento, error) {
 	var agendamento model.Agendamento
@@ -121,7 +125,7 @@ func (r *AgendamentoRepo) ListarPorPrestadorID(ctx context.Context, prestadorID 
 		Preload("Catalogo.Prestador").
 		Model(&model.Agendamento{}).
 		Joins("LEFT JOIN catalogos ON agendamentos.id_catalogo = catalogos.id").
-		Where("catalogos.id_prestador = ?", prestadorID)
+		Where("catalogos.id_prestador = ? AND agendamentos.status = ?", prestadorID, model.StatusPendente)
 
 	for key, value := range filters {
 		query = query.Where(key+" LIKE ?", "%"+value.(string)+"%")

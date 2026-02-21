@@ -30,9 +30,9 @@ type Container struct {
 	PagamentoRepo          *repo.PagamentoRepository
 
 	//Services
-	AuthService *services.AuthUSer
-	JwtService  *middleware.JwtService
-	Uploader    *services.SupabaseUploader
+	AuthService  *services.AuthUSer
+	JwtService   *middleware.JwtService
+	Uploader     *services.SupabaseUploader
 	MpesaGateway *gatewaympesa.MpesaGateway
 
 	//UseCases
@@ -64,6 +64,7 @@ type Container struct {
 	// AnexoImagemH *handler.AnexoImagemHandler
 	GaleriaH            *handler.GaleriaHandler
 	CategoriaPrestadorH *handler.CategoriaPrestadorHandler
+	PagamentoH          *handler.PagamentoHandler
 }
 
 func NewContainer(db *gorm.DB, cfg *config.Config, jwtService *middleware.JwtService) *Container {
@@ -108,12 +109,12 @@ func NewContainer(db *gorm.DB, cfg *config.Config, jwtService *middleware.JwtSer
 		c.UsuarioRepo,
 		c.NotificacaoRepo,
 		c.MpesaGateway,
-		cfg.MpesaAppKey, cfg.MpesaAppSecret, cfg.MpesaShortCode,
+		cfg.MpesaAppKey, cfg.MpesaAppPub, cfg.MpesaShortCode,
 	)
 
 	c.AgendamentoUC = usecases.NewAgendamentoUC(c.AgendamentoRepo, c.CatalogoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo, c.AnexoImagemRepo, c.PagamentoRepo, c.PagamentoUC)
 	c.ServicoUC = usecases.NewServicoUseCase(c.ServicoRepo, c.AgendamentoRepo, c.VagaRepo, c.NotificacaoRepo, c.UsuarioRepo, c.PagamentoUC)
-	c.PropostaUC = usecases.NewPropostaUseCase(c.PropostaRepo, c.VagaRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
+	c.PropostaUC = usecases.NewPropostaUseCase(c.PropostaRepo, c.VagaRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo, c.PagamentoRepo)
 	c.VagaUC = usecases.NewVagaUseCase(c.VagaRepo, c.AnexoImagemRepo, c.UsuarioRepo, c.PagamentoRepo, c.PagamentoUC)
 	c.NotificacaoUC = usecases.NewNotificacaoUseCase(c.NotificacaoRepo, c.UsuarioRepo)
 	c.AvaliacaoUC = usecases.NewAvaliacaoUseCase(c.AvaliacaoRepo, c.ServicoRepo, c.NotificacaoRepo, c.UsuarioRepo)
@@ -133,5 +134,6 @@ func NewContainer(db *gorm.DB, cfg *config.Config, jwtService *middleware.JwtSer
 	c.AvaliacaoH = handler.NewAvaliacaoHandler(*c.AvaliacaoUC)
 	c.GaleriaH = handler.NewGaleriaHandler(c.GaleriaUC, c.Uploader)
 	c.CategoriaPrestadorH = handler.NewCategoriaPrestadorHandler(*c.CategoriaPrestadorUC)
+	c.PagamentoH = handler.NewPagamentoHandler(*c.PagamentoUC)
 	return c
 }

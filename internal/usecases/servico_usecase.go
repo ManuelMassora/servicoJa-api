@@ -73,7 +73,7 @@ func (uc *ServicoUseCase) FinalizarServico(ctx context.Context, idServico, idUsu
 	servico.Status = model.StatusConcluido
 	servico.DataHoraFim = time.Now().UTC()
 
-	if servico.Agendamento.Catalogo.TipoPreco == "por_hora" {
+	if servico.IDAgendamento != nil && servico.Agendamento != nil && servico.Agendamento.Catalogo.TipoPreco == "por_hora" {
 		if servico.DataHoraInicio.IsZero() {
 			return errors.New("data de início do serviço não definida para cálculo por hora")
 		}
@@ -100,7 +100,7 @@ func (uc *ServicoUseCase) ConfirmarServico(ctx context.Context, idServico, idUsu
 		return errors.New("serviço deve estar concluído para confirmação")
 	}
 	err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
-		IDUsuario: servico.Agendamento.Catalogo.IDPrestador,
+		IDUsuario: servico.IDPrestador,
 		Titulo:    "Serviço Confirmado",
 		Mensagem:  "O cliente confirmou a conclusão do serviço. Obrigado por usar nossos serviços!",
 	})
@@ -115,7 +115,10 @@ func (uc *ServicoUseCase) ConfirmarServico(ctx context.Context, idServico, idUsu
 	}
 
 	// Pagar ao prestador
-	_ = uc.pagamentoUC.ProcessarPagamentoPrestador(ctx, servico.ID)
+	err = uc.pagamentoUC.ProcessarPagamentoPrestador(ctx, servico.ID)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -151,7 +154,10 @@ func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsua
 	}
 
 	// Devolver ao cliente e punir quem cancelou
-	_ = uc.pagamentoUC.ProcessarCancelamentoComReembolso(ctx, servico.ID, idUsuario)
+	err = uc.pagamentoUC.ProcessarCancelamentoComReembolso(ctx, servico.ID, idUsuario)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

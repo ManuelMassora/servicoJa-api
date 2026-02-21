@@ -106,4 +106,10 @@ func SetRoutes(server *gin.Engine, container *di.Container, jwtService *middlewa
 		categoriaPrestador.PATCH(":id", middleware.HasRole("ADMIN"), container.CategoriaPrestadorH.Editar)
 		categoriaPrestador.GET("", container.CategoriaPrestadorH.Listar)
 	}
+
+	pagamento := server.Group("pagamento")
+	{
+		pagamento.POST("/callback", container.PagamentoH.ReceiveCallback)
+		pagamento.GET("/simular-query", container.PagamentoH.SimularQuery)
+	}
 }

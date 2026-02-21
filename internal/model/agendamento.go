@@ -21,7 +21,7 @@ type Agendamento struct {
 }
 
 type AgendamentoRepo interface {
-	Criar(ctx context.Context, agendamento *Agendamento) error
+	Criar(ctx context.Context, agendamento *Agendamento) (*Agendamento, error)
 	BuscarPorID(ctx context.Context, id uint) (*Agendamento, error)
 	AtualizarStatus(ctx context.Context, id uint, status string) error
 	Listar(

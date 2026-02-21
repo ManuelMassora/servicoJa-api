@@ -9,15 +9,15 @@ import (
 )
 
 type Config struct {
-	DatabaseDSN      string
-	ServerPort       string
-	ServerHost       string
-	SupabaseURL      string
-	SupabaseKey      string
-	JwtSecretKey	 string
-	MpesaAppKey		 string
-	MpesaAppSecret	 string
-	MpesaShortCode	 string
+	DatabaseDSN    string
+	ServerPort     string
+	ServerHost     string
+	SupabaseURL    string
+	SupabaseKey    string
+	JwtSecretKey   string
+	MpesaAppKey    string
+	MpesaAppPub    string
+	MpesaShortCode string
 }
 
 func LoadConfig(envPath string) (*Config, error) {
@@ -38,7 +38,7 @@ func LoadConfig(envPath string) (*Config, error) {
 	supabaseKey := os.Getenv("SUPABASE_SERVICE_KEY")
 	jwtSecretKey := os.Getenv("JWT_SECRET")
 	mpesaAppKey := os.Getenv("MPESA_APP_KEY")
-	mpesaAppSecret := os.Getenv("MPESA_APP_SECRET")
+	mpesaAppPub := os.Getenv("MPESA_APP_PUB")
 	mpesaShortCode := os.Getenv("MPESA_SHORT_CODE")
 
 	if dbDSN == "" {
@@ -50,15 +50,15 @@ func LoadConfig(envPath string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		DatabaseDSN:      dbDSN,
-		ServerPort:       serverPort,
-		ServerHost:       serverHost,
-		SupabaseURL:      supabaseURL,
-		SupabaseKey:      supabaseKey,
-		JwtSecretKey:     jwtSecretKey,
-		MpesaAppKey:      mpesaAppKey,
-		MpesaAppSecret:   mpesaAppSecret,
-		MpesaShortCode:   mpesaShortCode,
+		DatabaseDSN:    dbDSN,
+		ServerPort:     serverPort,
+		ServerHost:     serverHost,
+		SupabaseURL:    supabaseURL,
+		SupabaseKey:    supabaseKey,
+		JwtSecretKey:   jwtSecretKey,
+		MpesaAppKey:    mpesaAppKey,
+		MpesaAppPub:    mpesaAppPub,
+		MpesaShortCode: mpesaShortCode,
 	}
 	return cfg, nil
 }

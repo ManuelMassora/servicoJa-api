@@ -16,8 +16,12 @@ func NewVagaRepository(db *gorm.DB) model.VagaRepo {
 	return &VagaRepository{db: db}
 }
 
-func (r *VagaRepository) Criar(ctx context.Context, vaga *model.Vaga) error {
-	return r.db.WithContext(ctx).Create(&vaga).Error
+func (r *VagaRepository) Criar(ctx context.Context, vaga *model.Vaga) (*model.Vaga, error) {
+	err := r.db.WithContext(ctx).Create(&vaga).Error
+	if err != nil {
+		return nil, err
+	}
+	return vaga, nil
 }
 
 func (r *VagaRepository) Salvar(ctx context.Context, vaga *model.Vaga) error {
@@ -40,7 +44,7 @@ func (r *VagaRepository) ListarDisponiveis(ctx context.Context, filters map[stri
 	var vagas []model.Vaga
 	query := r.db.WithContext(ctx).
 		Preload("Cliente").
-		Where("id_prestador IS NULL")
+		Where("id_prestador IS NULL AND status = ?", model.StatusDisponivel)
 	for key, value := range filters {
 		switch v := value.(type) {
 		case string:

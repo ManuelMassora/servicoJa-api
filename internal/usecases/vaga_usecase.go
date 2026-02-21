@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
@@ -69,16 +70,19 @@ func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario
 		IDCliente:   idUsuario,
 		Urgente:     req.Urgente,
 	}
-	if err := uc.vagaRepo.Criar(ctx, vaga); err != nil {
+	vagaSave, err := uc.vagaRepo.Criar(ctx, vaga)
+	if err != nil {
 		return err
 	}
 
 	// Criar registro de pagamento pendente
 	pagamento := &model.Pagamento{
-		IDVaga:    &vaga.ID,
+		IDVaga:    &vagaSave.ID,
 		IDCliente: idUsuario,
-		Valor:     vaga.Preco,
+		Valor:     vagaSave.Preco,
 		Status:    model.StatusPendente, // Esperando C2B
+		Referencia: "REF" + strconv.FormatUint(uint64(vagaSave.ID), 10),
+		// IDPrestador: vagaSave.IDPrestador,
 	}
 	if err := uc.pagamentoRepo.Criar(ctx, pagamento); err != nil {
 		return err
@@ -90,7 +94,7 @@ func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario
 	for _, anexoURL := range req.Anexos {
 		anexo := &model.AnexoImagem{
 			URL:    anexoURL,
-			VagaID: &vaga.ID,
+			VagaID: &vagaSave.ID,
 		}
 		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
 			// In a real application, you might want to handle the rollback of the vaga creation

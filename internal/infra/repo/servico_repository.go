@@ -16,8 +16,12 @@ func NewServicoRepository(db *gorm.DB) model.ServicoRepo {
 	return &ServicoRepository{db: db}
 }
 
-func (r *ServicoRepository) Criar(ctx context.Context, servico *model.Servico) error {
-	return r.db.WithContext(ctx).Create(servico).Error
+func (r *ServicoRepository) Criar(ctx context.Context, servico *model.Servico) (*model.Servico, error) {
+	err := r.db.WithContext(ctx).Create(servico).Error
+	if err != nil {
+		return nil, err
+	}
+	return servico, nil
 }
 
 func (r *ServicoRepository) Atualizar(ctx context.Context, servico *model.Servico) error {

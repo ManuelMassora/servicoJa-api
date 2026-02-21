@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
@@ -111,17 +112,19 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 		Longitude:   req.Longitude,
 	}
 
-	err = uc.r.Criar(ctx, agendamento)
+	agendamentoSave, err := uc.r.Criar(ctx, agendamento)
 	if err != nil {
 		return err
 	}
 
 	// Criar registro de pagamento pendente
 	pagamento := &model.Pagamento{
-		IDAgendamento: &agendamento.ID,
+		IDAgendamento: &agendamentoSave.ID,
 		IDCliente:     idCliente,
 		Valor:         catalogo.ValorFixo,
 		Status:        model.StatusPendente, // Esperando C2B
+		IDPrestador:   &catalogo.IDPrestador,
+		Referencia:    "REF" + strconv.FormatUint(uint64(agendamentoSave.ID), 10),
 	}
 	if err := uc.pagamentoRepo.Criar(ctx, pagamento); err != nil {
 		return err
@@ -129,11 +132,14 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 
 	// Iniciar o processo de pagamento via M-Pesa
 	_ = uc.pagamentoUC.IniciarPagamentoC2B(ctx, pagamento.ID, req.TelefonePagamento)
+	// if err != nil {
+	// 	return err
+	// }
 
 	for _, anexoURL := range req.Anexos {
 		anexo := &model.AnexoImagem{
 			URL:           anexoURL,
-			AgendamentoID: &agendamento.ID,
+			AgendamentoID: &agendamentoSave.ID,
 		}
 		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
 			// In a real application, you might want to handle the rollback of the agendamento creation
@@ -247,10 +253,17 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 		return errors.New("tipo de preço de catálogo inválido")
 	}
 
-	err = uc.servico.Criar(ctx, servico)
+	servicoSave, err := uc.servico.Criar(ctx, servico)
 	if err != nil {
 		return err
 	}
+
+	// Associar ID do serviço ao pagamento
+	p, err := uc.pagamentoRepo.BuscarPorAgendamento(ctx, id)
+	if err == nil && p != nil {
+		_ = uc.pagamentoRepo.AtualizarIDServico(ctx, p.ID, servicoSave.ID)
+	}
+
 	return uc.r.AtualizarStatus(ctx, id, "EM_ANDAMENTO")
 }
 

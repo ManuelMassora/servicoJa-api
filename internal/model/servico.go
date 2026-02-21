@@ -27,7 +27,7 @@ type Servico struct {
 }
 
 type ServicoRepo interface {
-	Criar(ctx context.Context, servico *Servico) error
+	Criar(ctx context.Context, servico *Servico) (*Servico, error)
 	Atualizar(ctx context.Context, servico *Servico) error
 	BuscarPorID(ctx context.Context, id uint) (*Servico, error)
 	AtualizarStatus(ctx context.Context, id uint, status string) error

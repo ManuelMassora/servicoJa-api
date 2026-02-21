@@ -14,6 +14,7 @@ type PropostaUseCase struct {
 	servicoRepo     model.ServicoRepo
 	notificacaoRepo model.NotificacaoRepo
 	usuarioRepo     model.UsuarioRepo
+	pagamentoRepo   model.PagamentoRepo
 }
 
 func NewPropostaUseCase(
@@ -22,6 +23,7 @@ func NewPropostaUseCase(
 	servicoRepo model.ServicoRepo,
 	notificacaoRepo model.NotificacaoRepo,
 	usuarioRepo model.UsuarioRepo,
+	pagamentoRepo model.PagamentoRepo,
 ) *PropostaUseCase {
 	return &PropostaUseCase{
 		propostaRepo:    propostaRepo,
@@ -29,6 +31,7 @@ func NewPropostaUseCase(
 		servicoRepo:     servicoRepo,
 		notificacaoRepo: notificacaoRepo,
 		usuarioRepo:     usuarioRepo,
+		pagamentoRepo:   pagamentoRepo,
 	}
 }
 
@@ -127,8 +130,14 @@ func (uc *PropostaUseCase) Responder(ctx context.Context, idProposta, idUsuario 
 			IDPrestador:    proposta.IDPrestador,
 			DataHoraInicio: time.Now(),
 		}
-		if err := uc.servicoRepo.Criar(ctx, servico); err != nil {
+		if servicoSave, err := uc.servicoRepo.Criar(ctx, servico); err != nil {
 			return err
+		} else {
+			// Associar ID do serviço ao pagamento
+			p, err := uc.pagamentoRepo.BuscarPorVaga(ctx, proposta.IDVaga)
+			if err == nil && p != nil {
+				_ = uc.pagamentoRepo.AtualizarIDServico(ctx, p.ID, servicoSave.ID)
+			}
 		}
 	} else {
 		err = uc.notificacaoRepo.Enviar(ctx, &model.Notificacao{
