@@ -4,15 +4,14 @@ import (
 	"context"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/dto"
-	"github.com/ManuelMassora/servicoJa-api/internal/infra/repo"
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 )
 
 type AnexoImagemUseCase struct {
-	repo *repo.AnexoImagemRepo
+	repo model.AnexoImagemRepo
 }
 
-func NewAnexoImagemUseCase(repo *repo.AnexoImagemRepo) *AnexoImagemUseCase {
+func NewAnexoImagemUseCase(repo model.AnexoImagemRepo) *AnexoImagemUseCase {
 	return &AnexoImagemUseCase{repo: repo}
 }
 

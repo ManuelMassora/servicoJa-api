@@ -24,15 +24,10 @@ func (m *MockClienteRepo) BuscarPorID(ctx context.Context, id uint) (*model.Clie
 	return args.Get(0).(*model.Cliente), args.Error(1)
 }
 
-func (m *MockClienteRepo) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Cliente, error) {
-	args := m.Called(ctx, id)
+func (m *MockClienteRepo) Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Cliente, error) {
+	args := m.Called(ctx, filters, orderBy, orderDir, limit, offset)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*model.Cliente), args.Error(1)
-}
-
-func (m *MockClienteRepo) Listar(ctx context.Context, filters map[string]interface{}, orderBy, orderDir string, limit, offset int) ([]model.Cliente, error) {
-	args := m.Called(ctx, filters, orderBy, orderDir, limit, offset)
 	return args.Get(0).([]model.Cliente), args.Error(1)
 }

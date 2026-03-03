@@ -48,7 +48,7 @@ type Container struct {
 	AnexoImagemUC        *usecases.AnexoImagemUseCase
 	GaleriaUC            *usecases.GaleriaUseCase
 	CategoriaPrestadorUC *usecases.CategoriaPrestadorUsecase
-	PagamentoUC          *usecases.PagamentoUseCase
+	PagamentoUC          usecases.PagamentoUseCase
 
 	//Handler
 	CategoriaH   *handler.CategoriaHandler
@@ -134,6 +134,6 @@ func NewContainer(db *gorm.DB, cfg *config.Config, jwtService *middleware.JwtSer
 	c.AvaliacaoH = handler.NewAvaliacaoHandler(*c.AvaliacaoUC)
 	c.GaleriaH = handler.NewGaleriaHandler(c.GaleriaUC, c.Uploader)
 	c.CategoriaPrestadorH = handler.NewCategoriaPrestadorHandler(*c.CategoriaPrestadorUC)
-	c.PagamentoH = handler.NewPagamentoHandler(*c.PagamentoUC)
+	c.PagamentoH = handler.NewPagamentoHandler(c.PagamentoUC)
 	return c
 }

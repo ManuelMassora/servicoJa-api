@@ -16,7 +16,7 @@ func (m *MockPrestadorRepo) Criar(ctx context.Context, prestador *model.Prestado
 	return args.Error(0)
 }
 
-func (m *MockPrestadorRepo) Editar(ctx context.Context, id uint, campos map[string]interface{}) (*model.Prestador,error) {
+func (m *MockPrestadorRepo) Editar(ctx context.Context, id uint, campos map[string]interface{}) (*model.Prestador, error) {
 	args := m.Called(ctx, id, campos)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -37,20 +37,18 @@ func (m *MockPrestadorRepo) BuscarPorID(ctx context.Context, id uint) (*model.Pr
 	return args.Get(0).(*model.Prestador), args.Error(1)
 }
 
-func (m *MockPrestadorRepo) BuscarPorUsuarioID(ctx context.Context, id uint) (*model.Prestador, error) {
-	args := m.Called(ctx, id)
+func (m *MockPrestadorRepo) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
+	args := m.Called(ctx, filters, statusDisponivel, orderBy, orderDir, limit, offset)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*model.Prestador), args.Error(1)
-}
-
-func (m *MockPrestadorRepo) Listar(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy, orderDir string, limit, offset int) ([]model.Prestador, error) {
-	args := m.Called(ctx, filters, statusDisponivel, orderBy, orderDir, limit, offset)
 	return args.Get(0).([]model.Prestador), args.Error(1)
 }
 
 func (m *MockPrestadorRepo) FindByLocation(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]model.Prestador, error) {
 	args := m.Called(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]model.Prestador), args.Error(1)
 }

@@ -17,7 +17,7 @@ type AgendamentoUC struct {
 	usuarioRepo     model.UsuarioRepo
 	anexoImagemRepo model.AnexoImagemRepo
 	pagamentoRepo   model.PagamentoRepo
-	pagamentoUC     *PagamentoUseCase
+	pagamentoUC     PagamentoUseCase
 }
 
 func NewAgendamentoUC(
@@ -28,7 +28,7 @@ func NewAgendamentoUC(
 	usuarioRepo model.UsuarioRepo,
 	anexoImagemRepo model.AnexoImagemRepo,
 	pagamentoRepo model.PagamentoRepo,
-	pagamentoUC *PagamentoUseCase,
+	pagamentoUC PagamentoUseCase,
 ) *AgendamentoUC {
 	return &AgendamentoUC{r: r,
 		catalogoRepo:    catalogoRepo,

@@ -20,7 +20,7 @@ import (
 const (
 	// M-Pesa API URLs
 	mpesaC2BURL   = "https://api.sandbox.vm.co.mz:18352/ipg/v1x/c2bPayment/singleStage/"
-	mpesaB2CURL   = "https://api.sandbox.vm.co.mz:18352/ipg/v1x/b2cPayment/"
+	mpesaB2CURL   = "https://api.sandbox.vm.co.mz:18345/ipg/v1x/b2cPayment/"
 	mpesaQueryURL = "https://api.sandbox.vm.co.mz:18353/ipg/v1x/queryTransactionStatus/"
 
 	// Response codes
@@ -30,7 +30,16 @@ const (
 	statusCheckDelay = 20 * time.Second
 )
 
-type PagamentoUseCase struct {
+type PagamentoUseCase interface {
+	IniciarPagamentoC2B(ctx context.Context, idPagamento uint, telefone string) error
+	ConfirmarPagamentoC2B(ctx context.Context, referencia string) error
+	ProcessarCancelamentoComReembolso(ctx context.Context, idServico uint, idUsuarioCancelou uint) error
+	ProcessarPagamentoPrestador(ctx context.Context, idServico uint) error
+	ProcessarCallbackMpesa(ctx context.Context, payload gatewaympesa.MpesaCallbackPayload) error
+	ProcessarQuerySimulada(ctx context.Context, referencia string) error
+}
+
+type pagamentoUseCaseImpl struct {
 	repo                     model.PagamentoRepo
 	servicoRepo              model.ServicoRepo
 	vagaRepo                 model.VagaRepo
@@ -52,8 +61,8 @@ func NewPagamentoUseCase(
 	notificacaoRepo model.NotificacaoRepo,
 	mpesaGateway *gatewaympesa.MpesaGateway,
 	mpesaAppKey, mpesaAppPub, mpesaServiceProviderCode string,
-) *PagamentoUseCase {
-	return &PagamentoUseCase{
+) PagamentoUseCase {
+	return &pagamentoUseCaseImpl{
 		repo:                     repo,
 		servicoRepo:              servicoRepo,
 		vagaRepo:                 vagaRepo,
@@ -67,7 +76,7 @@ func NewPagamentoUseCase(
 	}
 }
 
-func (uc *PagamentoUseCase) IniciarPagamentoC2B(ctx context.Context, idPagamento uint, telefone string) error {
+func (uc *pagamentoUseCaseImpl) IniciarPagamentoC2B(ctx context.Context, idPagamento uint, telefone string) error {
 	p, err := uc.repo.BuscarPorID(ctx, idPagamento)
 	if err != nil {
 		log.Printf("erro ao buscar pagamento: %v", err)
@@ -105,7 +114,7 @@ func (uc *PagamentoUseCase) IniciarPagamentoC2B(ctx context.Context, idPagamento
 
 	// Se por algum motivo o status já vier como Completed (ex: algumas APIs específicas)
 	if c2bResp.ResponseTransactionStatus == "Completed" || c2bResp.ResponseCode == mpesaSuccessCode {
-		log.Printf("Pagamento %s confirmado na resposta síncrona", p.Referencia)
+		log.Printf("Pagamento %s confirmed na resposta síncrona", p.Referencia)
 		go uc.ConfirmarPagamentoC2B(context.Background(), p.Referencia)
 		return nil
 	}
@@ -116,7 +125,7 @@ func (uc *PagamentoUseCase) IniciarPagamentoC2B(ctx context.Context, idPagamento
 	return nil
 }
 
-func (uc *PagamentoUseCase) ConfirmarPagamentoC2B(ctx context.Context, referencia string) error {
+func (uc *pagamentoUseCaseImpl) ConfirmarPagamentoC2B(ctx context.Context, referencia string) error {
 	p, err := uc.repo.BuscarPorReferencia(ctx, referencia)
 	if err != nil {
 		return fmt.Errorf("pagamento com referência %s não encontrado", referencia)
@@ -160,7 +169,7 @@ func (uc *PagamentoUseCase) ConfirmarPagamentoC2B(ctx context.Context, referenci
 	return nil
 }
 
-func (uc *PagamentoUseCase) ProcessarCancelamentoComReembolso(ctx context.Context, idServico uint, idUsuarioCancelou uint) error {
+func (uc *pagamentoUseCaseImpl) ProcessarCancelamentoComReembolso(ctx context.Context, idServico uint, idUsuarioCancelou uint) error {
 	servico, err := uc.servicoRepo.BuscarPorID(ctx, idServico)
 	if err != nil {
 		return err
@@ -211,7 +220,7 @@ func (uc *PagamentoUseCase) ProcessarCancelamentoComReembolso(ctx context.Contex
 	return err
 }
 
-func (uc *PagamentoUseCase) ProcessarPagamentoPrestador(ctx context.Context, idServico uint) error {
+func (uc *pagamentoUseCaseImpl) ProcessarPagamentoPrestador(ctx context.Context, idServico uint) error {
 	servico, err := uc.servicoRepo.BuscarPorID(ctx, idServico)
 	if err != nil {
 		return err
@@ -253,7 +262,7 @@ func (uc *PagamentoUseCase) ProcessarPagamentoPrestador(ctx context.Context, idS
 }
 
 // construirPayloadB2C builds the B2C payment payload
-func (uc *PagamentoUseCase) construirPayloadB2C(amount, customerMSISDN, thirdPartyRef string, servicoID uint) []byte {
+func (uc *pagamentoUseCaseImpl) construirPayloadB2C(amount, customerMSISDN, thirdPartyRef string, servicoID uint) []byte {
 	return []byte(fmt.Sprintf(`{
 		"input_Amount": "%s",
 		"input_CustomerMSISDN": "%s",
@@ -265,7 +274,7 @@ func (uc *PagamentoUseCase) construirPayloadB2C(amount, customerMSISDN, thirdPar
 }
 
 // construirPayloadC2B builds the C2B payment payload
-func (uc *PagamentoUseCase) construirPayloadC2B(amount, customerMSISDN, thirdPartyRef string, AgendamentoVagaID uint) []byte {
+func (uc *pagamentoUseCaseImpl) construirPayloadC2B(amount, customerMSISDN, thirdPartyRef string, AgendamentoVagaID uint) []byte {
 	return []byte(fmt.Sprintf(`{
 		"input_Amount": "%s",
 		"input_CustomerMSISDN": "%s",
@@ -277,7 +286,7 @@ func (uc *PagamentoUseCase) construirPayloadC2B(amount, customerMSISDN, thirdPar
 }
 
 // enviarPagamento sends payment request to M-Pesa
-func (uc *PagamentoUseCase) enviarPagamento(url string, payload []byte) ([]byte, error) {
+func (uc *pagamentoUseCaseImpl) enviarPagamento(url string, payload []byte) ([]byte, error) {
 	token, err := uc.generateBearerToken()
 	if err != nil {
 		return nil, fmt.Errorf("erro ao gerar token: %w", err)
@@ -292,7 +301,7 @@ func (uc *PagamentoUseCase) enviarPagamento(url string, payload []byte) ([]byte,
 }
 
 // agendarVerificacaoStatus schedules a status check after a delay
-func (uc *PagamentoUseCase) agendarVerificacaoStatus(ctx context.Context, referencia, conversationID string) {
+func (uc *pagamentoUseCaseImpl) agendarVerificacaoStatus(ctx context.Context, referencia, conversationID string) {
 	time.Sleep(statusCheckDelay)
 
 	if err := uc.verificarStatusPagamento(ctx, referencia, conversationID); err != nil {
@@ -301,7 +310,7 @@ func (uc *PagamentoUseCase) agendarVerificacaoStatus(ctx context.Context, refere
 }
 
 // verificarStatusPagamento queries the payment status from M-Pesa
-func (uc *PagamentoUseCase) verificarStatusPagamento(ctx context.Context, referencia, conversationID string) error {
+func (uc *pagamentoUseCaseImpl) verificarStatusPagamento(ctx context.Context, referencia, conversationID string) error {
 	token, err := uc.generateBearerToken()
 	if err != nil {
 		return fmt.Errorf("erro ao gerar token: %w", err)
@@ -324,7 +333,7 @@ func (uc *PagamentoUseCase) verificarStatusPagamento(ctx context.Context, refere
 		return nil
 	}
 
-	// Se a query indicar sucesso via ResponseCode ou TransactionStatus
+	// Se a query indicar sucesso via ResponseCode or TransactionStatus
 	if queryResp.ResponseCode == mpesaSuccessCode ||
 		queryResp.TransactionStatus == "Completed" ||
 		queryResp.ResponseTransactionStatus == "Completed" {
@@ -337,7 +346,7 @@ func (uc *PagamentoUseCase) verificarStatusPagamento(ctx context.Context, refere
 	return nil
 }
 
-func (uc *PagamentoUseCase) ProcessarCallbackMpesa(ctx context.Context, payload gatewaympesa.MpesaCallbackPayload) error {
+func (uc *pagamentoUseCaseImpl) ProcessarCallbackMpesa(ctx context.Context, payload gatewaympesa.MpesaCallbackPayload) error {
 	log.Printf("Processando callback M-Pesa: Ref=%s, Code=%s, Status=%s",
 		payload.ThirdPartyReference, payload.ResponseCode, payload.ResponseTransactionStatus)
 
@@ -350,13 +359,13 @@ func (uc *PagamentoUseCase) ProcessarCallbackMpesa(ctx context.Context, payload 
 	return nil
 }
 
-func (uc *PagamentoUseCase) ProcessarQuerySimulada(ctx context.Context, referencia string) error {
+func (uc *pagamentoUseCaseImpl) ProcessarQuerySimulada(ctx context.Context, referencia string) error {
 	log.Printf("Processando query simulada para referência: %s", referencia)
 	return uc.ConfirmarPagamentoC2B(ctx, referencia)
 }
 
 // construirQueryParams builds the query parameters for transaction status check
-func (uc *PagamentoUseCase) construirQueryParams(referencia, conversationID string) map[string]string {
+func (uc *pagamentoUseCaseImpl) construirQueryParams(referencia, conversationID string) map[string]string {
 	return map[string]string{
 		"input_ThirdPartyReference": referencia,
 		"input_QueryReference":      conversationID,
@@ -364,7 +373,7 @@ func (uc *PagamentoUseCase) construirQueryParams(referencia, conversationID stri
 	}
 }
 
-func (uc *PagamentoUseCase) generateBearerToken() (string, error) {
+func (uc *pagamentoUseCaseImpl) generateBearerToken() (string, error) {
 	if uc.mpesaAppPub == "" {
 		return "", fmt.Errorf("chave pública M-Pesa não configurada")
 	}
@@ -385,7 +394,7 @@ func (uc *PagamentoUseCase) generateBearerToken() (string, error) {
 }
 
 // parsePublicKey parses the RSA public key from PEM format
-func (uc *PagamentoUseCase) parsePublicKey(keyData string) (*rsa.PublicKey, error) {
+func (uc *pagamentoUseCaseImpl) parsePublicKey(keyData string) (*rsa.PublicKey, error) {
 	// Add PEM headers if not present
 	if !strings.Contains(keyData, "-----BEGIN") {
 		keyData = fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%s\n-----END PUBLIC KEY-----", keyData)

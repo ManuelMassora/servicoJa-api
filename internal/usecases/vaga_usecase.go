@@ -14,10 +14,10 @@ type VagaUseCase struct {
 	anexoImagemRepo model.AnexoImagemRepo
 	usuarioRepo     model.UsuarioRepo
 	pagamentoRepo   model.PagamentoRepo
-	pagamentoUC     *PagamentoUseCase
+	pagamentoUC     PagamentoUseCase
 }
 
-func NewVagaUseCase(vagaRepo model.VagaRepo, anexoImagemRepo model.AnexoImagemRepo, usuarioRepo model.UsuarioRepo, pagamentoRepo model.PagamentoRepo, pagamentoUC *PagamentoUseCase) *VagaUseCase {
+func NewVagaUseCase(vagaRepo model.VagaRepo, anexoImagemRepo model.AnexoImagemRepo, usuarioRepo model.UsuarioRepo, pagamentoRepo model.PagamentoRepo, pagamentoUC PagamentoUseCase) *VagaUseCase {
 	return &VagaUseCase{vagaRepo: vagaRepo, anexoImagemRepo: anexoImagemRepo, usuarioRepo: usuarioRepo, pagamentoRepo: pagamentoRepo, pagamentoUC: pagamentoUC}
 }
 
@@ -77,10 +77,10 @@ func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario
 
 	// Criar registro de pagamento pendente
 	pagamento := &model.Pagamento{
-		IDVaga:    &vagaSave.ID,
-		IDCliente: idUsuario,
-		Valor:     vagaSave.Preco,
-		Status:    model.StatusPendente, // Esperando C2B
+		IDVaga:     &vagaSave.ID,
+		IDCliente:  idUsuario,
+		Valor:      vagaSave.Preco,
+		Status:     model.StatusPendente, // Esperando C2B
 		Referencia: "REF" + strconv.FormatUint(uint64(vagaSave.ID), 10),
 		// IDPrestador: vagaSave.IDPrestador,
 	}

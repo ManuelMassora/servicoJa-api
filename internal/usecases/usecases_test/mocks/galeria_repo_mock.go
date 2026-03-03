@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type GaleriaRepoMock struct {
+type MockGaleriaRepo struct {
 	mock.Mock
 }
 
-func (m *GaleriaRepoMock) Create(ctx context.Context, galeria *model.Galeria) (*model.Galeria, error) {
+func (m *MockGaleriaRepo) Create(ctx context.Context, galeria *model.Galeria) (*model.Galeria, error) {
 	args := m.Called(ctx, galeria)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -19,7 +19,7 @@ func (m *GaleriaRepoMock) Create(ctx context.Context, galeria *model.Galeria) (*
 	return args.Get(0).(*model.Galeria), args.Error(1)
 }
 
-func (m *GaleriaRepoMock) FindByID(ctx context.Context, id uint) (*model.Galeria, error) {
+func (m *MockGaleriaRepo) FindByID(ctx context.Context, id uint) (*model.Galeria, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -27,7 +27,7 @@ func (m *GaleriaRepoMock) FindByID(ctx context.Context, id uint) (*model.Galeria
 	return args.Get(0).(*model.Galeria), args.Error(1)
 }
 
-func (m *GaleriaRepoMock) FindByPrestadorID(ctx context.Context, prestadorID uint) (*model.Galeria, error) {
+func (m *MockGaleriaRepo) FindByPrestadorID(ctx context.Context, prestadorID uint) (*model.Galeria, error) {
 	args := m.Called(ctx, prestadorID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -35,22 +35,22 @@ func (m *GaleriaRepoMock) FindByPrestadorID(ctx context.Context, prestadorID uin
 	return args.Get(0).(*model.Galeria), args.Error(1)
 }
 
-func (m *GaleriaRepoMock) Delete(ctx context.Context, id uint) error {
+func (m *MockGaleriaRepo) Delete(ctx context.Context, id uint) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *GaleriaRepoMock) AddImage(ctx context.Context, imagem *model.Imagem) error {
+func (m *MockGaleriaRepo) AddImage(ctx context.Context, imagem *model.Imagem) error {
 	args := m.Called(ctx, imagem)
 	return args.Error(0)
 }
 
-func (m *GaleriaRepoMock) CountImages(ctx context.Context, galeriaID uint) (int64, error) {
+func (m *MockGaleriaRepo) CountImages(ctx context.Context, galeriaID uint) (int64, error) {
 	args := m.Called(ctx, galeriaID)
 	return args.Get(0).(int64), args.Error(1)
 }
 
-func (m *GaleriaRepoMock) FindByGaleriaID(ctx context.Context, galeriaID uint) ([]model.Imagem, error) {
+func (m *MockGaleriaRepo) FindByGaleriaID(ctx context.Context, galeriaID uint) ([]model.Imagem, error) {
 	args := m.Called(ctx, galeriaID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -58,7 +58,7 @@ func (m *GaleriaRepoMock) FindByGaleriaID(ctx context.Context, galeriaID uint) (
 	return args.Get(0).([]model.Imagem), args.Error(1)
 }
 
-func (m *GaleriaRepoMock) FindByPrestadorIDs(ctx context.Context, prestadorIDs []uint) ([]model.Galeria, error) {
+func (m *MockGaleriaRepo) FindByPrestadorIDs(ctx context.Context, prestadorIDs []uint) ([]model.Galeria, error) {
 	args := m.Called(ctx, prestadorIDs)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

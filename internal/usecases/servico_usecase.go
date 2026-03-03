@@ -15,7 +15,7 @@ type ServicoUseCase struct {
 	vagaRepo        model.VagaRepo
 	notificacaoRepo model.NotificacaoRepo
 	usuarioRepo     model.UsuarioRepo
-	pagamentoUC     *PagamentoUseCase
+	pagamentoUC     PagamentoUseCase
 }
 
 type ServicoResponse struct {
@@ -36,7 +36,7 @@ type ServicoResponse struct {
 	SeAvaliado     bool      `json:"se_avaliado"`
 }
 
-func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo, pagamentoUC *PagamentoUseCase) *ServicoUseCase {
+func NewServicoUseCase(r model.ServicoRepo, agendamentoRepo model.AgendamentoRepo, vagaRepo model.VagaRepo, notificacaoRepo model.NotificacaoRepo, usuarioRepo model.UsuarioRepo, pagamentoUC PagamentoUseCase) *ServicoUseCase {
 	return &ServicoUseCase{
 		r:               r,
 		agendamentoRepo: agendamentoRepo,
@@ -52,7 +52,7 @@ func (uc *ServicoUseCase) FinalizarServico(ctx context.Context, idServico, idUsu
 	if err != nil {
 		return err
 	}
-	if servico.Cliente.IDUsuario != idUsuario && servico.Prestador.IDUsuario != idUsuario {
+	if servico.IDCliente != idUsuario && servico.IDPrestador != idUsuario {
 		return errors.New("usuário não autorizado a finalizar este serviço")
 	}
 	if servico.Status == model.StatusConcluido || servico.Status == model.StatusCancelado {
@@ -93,7 +93,7 @@ func (uc *ServicoUseCase) ConfirmarServico(ctx context.Context, idServico, idUsu
 	if err != nil {
 		return err
 	}
-	if servico.Cliente.IDUsuario != idUsuario {
+	if servico.IDCliente != idUsuario {
 		return errors.New("usuário não autorizado confirmar este serviço")
 	}
 	if servico.Status != model.StatusConcluido {
@@ -140,7 +140,7 @@ func (uc *ServicoUseCase) CancelarServico(ctx context.Context, idServico, idUsua
 	if err != nil {
 		return err
 	}
-	if servico.Cliente.IDUsuario != idUsuario && servico.Prestador.IDUsuario != idUsuario {
+	if servico.IDCliente != idUsuario && servico.IDPrestador != idUsuario {
 		return errors.New("usuário não autorizado a cancelar este serviço")
 	}
 	if servico.Status == model.StatusConcluido || servico.Status == model.StatusCancelado {
