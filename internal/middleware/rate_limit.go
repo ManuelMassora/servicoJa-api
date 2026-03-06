@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"net/http"
+	"os"
+	"sync"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
-	"net/http"
-	"sync"
 )
 
 var visitors = make(map[string]*rate.Limiter)
@@ -25,6 +27,10 @@ func getLimiter(ip string) *rate.Limiter {
 
 func RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if os.Getenv("APP_ENV") == "test" {
+			c.Next()
+			return
+		}
 		ip := c.ClientIP()
 		limiter := getLimiter(ip)
 

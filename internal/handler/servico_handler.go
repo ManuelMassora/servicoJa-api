@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -8,11 +9,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ServicoHandler struct {
-	uc usecases.ServicoUseCase
+type ServicoUseCase interface {
+	FinalizarServico(ctx context.Context, idServico uint, idUsuario uint) error
+	ConfirmarServico(ctx context.Context, idServico uint, idUsuario uint) error
+	CancelarServico(ctx context.Context, idServico uint, idUsuario uint) error
+	ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.ServicoResponse, error)
+	ListarPorPrestador(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.ServicoResponse, error)
+	ListarPorLocalizacao(ctx context.Context, idUsuario uint, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.ServicoResponse, error)
 }
 
-func NewServicoHandler(uc usecases.ServicoUseCase) *ServicoHandler {
+type ServicoHandler struct {
+	uc ServicoUseCase
+}
+
+func NewServicoHandler(uc ServicoUseCase) *ServicoHandler {
 	return &ServicoHandler{uc: uc}
 }
 
@@ -273,7 +283,7 @@ func (h *ServicoHandler) ListarPorLocalizacao(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Longitude inválida"})
 		return
-		}
+	}
 	radius, err := strconv.ParseFloat(c.DefaultQuery("radius", "10"), 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Raio inválido"})

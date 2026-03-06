@@ -20,34 +20,34 @@ func NewCatalogoUC(
 }
 
 type RequestCreateCatalogo struct {
-	Nome        	string   `json:"nome" form:"nome" binding:"required"`
-	Descricao   	string   `json:"descricao" form:"descricao" binding:"required"`
-	TipoPreco		string 	 `json:"tipo_preco" form:"tipo_preco" binding:"required,oneof=fixo por_hora"`
-	ValorFixo   	float64  `json:"valor_fixo" form:"valor_fixo"`
-	ValorPorHora	float64  `json:"valor_por_hora" form:"valor_por_hora"`
-	IdCategoria  	uint   	`json:"categoria_id" form:"categoria_id" binding:"required"`
-	Localizacao 	string   `json:"localizacao" form:"localizacao" binding:"required"`
-	Latitude    	float64  `json:"latitude" form:"latitude" binding:"required"`
-	Longitude   	float64  `json:"longitude" form:"longitude" binding:"required"`
-	Anexos      	[]string `binding:"-"`
+	Nome         string   `json:"nome" form:"nome" binding:"required"`
+	Descricao    string   `json:"descricao" form:"descricao" binding:"required"`
+	TipoPreco    string   `json:"tipo_preco" form:"tipo_preco" binding:"required,oneof=fixo por_hora"`
+	ValorFixo    float64  `json:"valor_fixo" form:"valor_fixo"`
+	ValorPorHora float64  `json:"valor_por_hora" form:"valor_por_hora"`
+	IdCategoria  uint     `json:"categoria_id" form:"categoria_id" binding:"required"`
+	Localizacao  string   `json:"localizacao" form:"localizacao" binding:"required"`
+	Latitude     float64  `json:"latitude" form:"latitude" binding:"required"`
+	Longitude    float64  `json:"longitude" form:"longitude" binding:"required"`
+	Anexos       []string `binding:"-"`
 }
 type ResponseCatalogo struct {
-	ID		  	uint    `json:"id"`
-	Nome        string  `json:"nome"`
-	Descricao   string  `json:"descricao"`
-	TipoPreco	string  `json:"tipo_preco"`
-	ValorFixo   float64 `json:"valor_fixo"`
-	ValorPorHora float64 `json:"valor_por_hora"`
-	Categoria   string  `json:"categoria"`
-	Disponivel  bool    `json:"disponivel"`
-	Prestador   string 	`json:"prestador"`
-	Localizacao string   `json:"localizacao"`
-	Latitude    float64  `json:"latitude"`
-	Longitude   float64  `json:"longitude"`
-	Anexos      []string `json:"anexos"`
+	ID           uint     `json:"id"`
+	Nome         string   `json:"nome"`
+	Descricao    string   `json:"descricao"`
+	TipoPreco    string   `json:"tipo_preco"`
+	ValorFixo    float64  `json:"valor_fixo"`
+	ValorPorHora float64  `json:"valor_por_hora"`
+	Categoria    string   `json:"categoria"`
+	Disponivel   bool     `json:"disponivel"`
+	Prestador    string   `json:"prestador"`
+	Localizacao  string   `json:"localizacao"`
+	Latitude     float64  `json:"latitude"`
+	Longitude    float64  `json:"longitude"`
+	Anexos       []string `json:"anexos"`
 }
 
-func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) error {
+func (uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalogo, idPrestador uint) (uint, error) {
 	catalogo := &model.Catalogo{
 		Nome:         request.Nome,
 		Descricao:    request.Descricao,
@@ -62,20 +62,20 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 	}
 	// Validation for pricing based on TipoPreco
 	if catalogo.TipoPreco == "fixo" && catalogo.ValorFixo <= 0 {
-		return errors.New("para preco fixo, o valor fixo deve ser maior que zero")
+		return 0, errors.New("para preco fixo, o valor fixo deve ser maior que zero")
 	}
 	if catalogo.TipoPreco == "por_hora" && catalogo.ValorPorHora <= 0 {
-		return errors.New("para preco por hora, o valor por hora deve ser maior que zero")
+		return 0, errors.New("para preco por hora, o valor por hora deve ser maior que zero")
 	}
 	if catalogo.TipoPreco == "por_hora" && catalogo.ValorFixo > 0 {
-		return errors.New("preco por hora nao pode ter valor fixo")
+		return 0, errors.New("preco por hora nao pode ter valor fixo")
 	}
 	if catalogo.TipoPreco == "fixo" && catalogo.ValorPorHora > 0 {
-		return errors.New("preco fixo nao pode ter valor por hora")
+		return 0, errors.New("preco fixo nao pode ter valor por hora")
 	}
 
 	if err := uc.r.Create(ctx, catalogo); err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, anexoURL := range request.Anexos {
@@ -85,14 +85,14 @@ func(uc *CatalogoUseCase) Criar(ctx context.Context, request RequestCreateCatalo
 		}
 		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
 			// In a real application, you might want to handle the rollback of the catalogo creation
-			return err
+			return 0, err
 		}
 	}
 
-	return nil
+	return catalogo.ID, nil
 }
 
-func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador uint, campos map[string]interface{}) error {
+func (uc *CatalogoUseCase) Editar(ctx context.Context, id, idPrestador uint, campos map[string]interface{}) error {
 	catalogo, err := uc.r.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func(uc *CatalogoUseCase) Editar(ctx context.Context,id, idPrestador uint, campo
 	return uc.r.Update(ctx, id, campos)
 }
 
-func(uc *CatalogoUseCase) Apagar(ctx context.Context, id, idPrestador uint) error {
+func (uc *CatalogoUseCase) Apagar(ctx context.Context, id, idPrestador uint) error {
 	catalogo, err := uc.r.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func(uc *CatalogoUseCase) Apagar(ctx context.Context, id, idPrestador uint) erro
 	return uc.r.Delete(ctx, id)
 }
 
-func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
+func (uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
 	catalogos, err := uc.r.FindAll(ctx, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -131,29 +131,29 @@ func(uc *CatalogoUseCase) Listar(ctx context.Context, filters map[string]interfa
 	for _, anexo := range anexos {
 		anexosPorVagaMap[*anexo.CatalogoID] = append(anexosPorVagaMap[*anexo.CatalogoID], anexo.URL)
 	}
-	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
+	catalogoResponse := make([]ResponseCatalogo, 0, len(catalogos))
 	for _, catalogo := range catalogos {
 		urls := anexosPorVagaMap[catalogo.ID]
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
-			ID: catalogo.ID,
-			Nome: catalogo.Nome,
-			Descricao: catalogo.Descricao,
-			TipoPreco: catalogo.TipoPreco,
-			ValorFixo: catalogo.ValorFixo,
+			ID:           catalogo.ID,
+			Nome:         catalogo.Nome,
+			Descricao:    catalogo.Descricao,
+			TipoPreco:    catalogo.TipoPreco,
+			ValorFixo:    catalogo.ValorFixo,
 			ValorPorHora: catalogo.ValorPorHora,
-			Categoria: catalogo.Categoria.Nome,
-			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Nome,
-			Localizacao: catalogo.Localizacao,
-			Latitude: catalogo.Latitude,
-			Longitude: catalogo.Longitude,
-			Anexos: urls,
+			Categoria:    catalogo.Categoria.Nome,
+			Disponivel:   catalogo.Disponivel,
+			Prestador:    catalogo.Prestador.Nome,
+			Localizacao:  catalogo.Localizacao,
+			Latitude:     catalogo.Latitude,
+			Longitude:    catalogo.Longitude,
+			Anexos:       urls,
 		})
 	}
 	return catalogoResponse, nil
 }
 
-func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
+func (uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context, prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
 	catalogos, err := uc.r.FindByPrestadorID(ctx, prestadorID, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -170,29 +170,29 @@ func(uc *CatalogoUseCase) ListarPorPrestador(ctx context.Context,prestadorID uin
 	for _, anexo := range anexos {
 		anexosPorVagaMap[*anexo.CatalogoID] = append(anexosPorVagaMap[*anexo.CatalogoID], anexo.URL)
 	}
-	catalogoResponse := make([]ResponseCatalogo,0, len(catalogos))
+	catalogoResponse := make([]ResponseCatalogo, 0, len(catalogos))
 	for _, catalogo := range catalogos {
 		urls := anexosPorVagaMap[catalogo.ID]
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
-			ID: catalogo.ID,
-			Nome: catalogo.Nome,
-			Descricao: catalogo.Descricao,
-			TipoPreco: catalogo.TipoPreco,
-			ValorFixo: catalogo.ValorFixo,
+			ID:           catalogo.ID,
+			Nome:         catalogo.Nome,
+			Descricao:    catalogo.Descricao,
+			TipoPreco:    catalogo.TipoPreco,
+			ValorFixo:    catalogo.ValorFixo,
 			ValorPorHora: catalogo.ValorPorHora,
-			Categoria: catalogo.Categoria.Nome,
-			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Nome,
-			Localizacao: catalogo.Localizacao,
-			Latitude: catalogo.Latitude,
-			Longitude: catalogo.Longitude,
-			Anexos: urls,
+			Categoria:    catalogo.Categoria.Nome,
+			Disponivel:   catalogo.Disponivel,
+			Prestador:    catalogo.Prestador.Nome,
+			Localizacao:  catalogo.Localizacao,
+			Latitude:     catalogo.Latitude,
+			Longitude:    catalogo.Longitude,
+			Anexos:       urls,
 		})
 	}
 	return catalogoResponse, nil
 }
 
-func(uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
+func (uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]ResponseCatalogo, error) {
 	catalogos, err := uc.r.FindByLocation(ctx, latitude, longitude, radius, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -213,19 +213,19 @@ func(uc *CatalogoUseCase) ListarPorLocalizacao(ctx context.Context, latitude, lo
 	for _, catalogo := range catalogos {
 		urls := anexosPorVagaMap[catalogo.ID]
 		catalogoResponse = append(catalogoResponse, ResponseCatalogo{
-			ID: catalogo.ID,
-			Nome: catalogo.Nome,
-			Descricao: catalogo.Descricao,
-			TipoPreco: catalogo.TipoPreco,
-			ValorFixo: catalogo.ValorFixo,
+			ID:           catalogo.ID,
+			Nome:         catalogo.Nome,
+			Descricao:    catalogo.Descricao,
+			TipoPreco:    catalogo.TipoPreco,
+			ValorFixo:    catalogo.ValorFixo,
 			ValorPorHora: catalogo.ValorPorHora,
-			Categoria: catalogo.Categoria.Nome,
-			Disponivel: catalogo.Disponivel,
-			Prestador: catalogo.Prestador.Nome,
-			Localizacao: catalogo.Localizacao,
-			Latitude: catalogo.Latitude,
-			Longitude: catalogo.Longitude,
-			Anexos: urls,
+			Categoria:    catalogo.Categoria.Nome,
+			Disponivel:   catalogo.Disponivel,
+			Prestador:    catalogo.Prestador.Nome,
+			Localizacao:  catalogo.Localizacao,
+			Latitude:     catalogo.Latitude,
+			Longitude:    catalogo.Longitude,
+			Anexos:       urls,
 		})
 	}
 	return catalogoResponse, nil

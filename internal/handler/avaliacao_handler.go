@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -8,11 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AvaliacaoHandler struct {
-	uc usecases.AvaliacaoUseCase
+type AvaliacaoUseCase interface {
+	Criar(ctx context.Context, req usecases.AvaliacaoRequest, idAvaliador uint) error
+	ListarPorCliente(ctx context.Context, idCliente uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AvaliacaoResponse, error)
+	ListarPorPrestador(ctx context.Context, idPrestador uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AvaliacaoResponse, error)
+	MediaPorPrestador(ctx context.Context, idPrestador uint) (float64, error)
 }
 
-func NewAvaliacaoHandler(uc usecases.AvaliacaoUseCase) *AvaliacaoHandler {
+type AvaliacaoHandler struct {
+	uc AvaliacaoUseCase
+}
+
+func NewAvaliacaoHandler(uc AvaliacaoUseCase) *AvaliacaoHandler {
 	return &AvaliacaoHandler{uc: uc}
 }
 

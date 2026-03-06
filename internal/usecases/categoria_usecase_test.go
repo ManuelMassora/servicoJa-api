@@ -20,9 +20,9 @@ func TestCategoriaUseCase_Criar_Success(t *testing.T) {
 
 	repo.On("Criar", ctx, &model.Categoria{Nome: "Limpeza", Descricao: "Limpeza de casas"}).Return(nil)
 
-	err := uc.Criar(ctx, req)
-
+	id, err := uc.Criar(ctx, req)
 	assert.NoError(t, err)
+	assert.Equal(t, uint(0), id)
 }
 
 func TestCategoriaUseCase_Listar_Success(t *testing.T) {

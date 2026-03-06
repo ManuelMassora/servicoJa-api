@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
@@ -49,14 +50,14 @@ type VagaResponse struct {
 	PropostasNovas uint     `json:"propostas_novas,omitempty"`
 }
 
-func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) error {
+func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario uint) (uint, error) {
 	usuario, err := uc.usuarioRepo.BuscarPorID(ctx, idUsuario)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if usuario.SuspensoAte != nil && usuario.SuspensoAte.After(time.Now()) {
-		return errors.New("sua conta está suspensa até " + usuario.SuspensoAte.Format("02/01/2006 15:04"))
+		return 0, errors.New("sua conta está suspensa até " + usuario.SuspensoAte.Format("02/01/2006 15:04"))
 	}
 
 	vaga := &model.Vaga{
@@ -72,7 +73,7 @@ func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario
 	}
 	vagaSave, err := uc.vagaRepo.Criar(ctx, vaga)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Criar registro de pagamento pendente
@@ -81,11 +82,11 @@ func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario
 		IDCliente:  idUsuario,
 		Valor:      vagaSave.Preco,
 		Status:     model.StatusPendente, // Esperando C2B
-		Referencia: "REF" + strconv.FormatUint(uint64(vagaSave.ID), 10),
+		Referencia: "VAG-" + strconv.FormatUint(uint64(vagaSave.ID), 10),
 		// IDPrestador: vagaSave.IDPrestador,
 	}
 	if err := uc.pagamentoRepo.Criar(ctx, pagamento); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Iniciar o processo de pagamento via M-Pesa
@@ -98,11 +99,11 @@ func (uc *VagaUseCase) CriarVaga(ctx context.Context, req VagaRequest, idUsuario
 		}
 		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
 			// In a real application, you might want to handle the rollback of the vaga creation
-			return err
+			return 0, err
 		}
 	}
 
-	return nil
+	return vagaSave.ID, nil
 }
 
 func (uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) error {
@@ -115,8 +116,23 @@ func (uc *VagaUseCase) CancelarVaga(ctx context.Context, id, idUsuario uint) err
 	}
 	vaga.DeletedAt.Time = time.Now()
 	vaga.DeletedAt.Valid = true
+	statusAntigo := vaga.Status
+	statusAntigoID := vaga.ID
 	vaga.Status = model.StatusCancelado
-	return uc.vagaRepo.Salvar(ctx, vaga)
+	err = uc.vagaRepo.Salvar(ctx, vaga)
+	if err != nil {
+		return err
+	}
+
+	// Se já foi pago, processar reembolso
+	if statusAntigo != model.StatusAguardandoPagamento {
+		log.Printf("Iniciando reembolso para vaga %d (status antigo: %s)", statusAntigoID, statusAntigo)
+		_ = uc.pagamentoUC.ProcessarReembolsoVaga(ctx, statusAntigoID, idUsuario)
+	} else {
+		log.Printf("Vaga %d ignorada para reembolso (status: %s)", statusAntigoID, statusAntigo)
+	}
+
+	return nil
 }
 
 func (uc *VagaUseCase) BuscarPorIDIfCliente(ctx context.Context, id, idUsuario uint) (*VagaResponse, error) {
@@ -170,7 +186,7 @@ func (uc *VagaUseCase) ListarVagasDisponiveis(ctx context.Context, filters map[s
 	for _, anexo := range anexos {
 		anexosPorVagaMap[*anexo.VagaID] = append(anexosPorVagaMap[*anexo.VagaID], anexo.URL)
 	}
-	var resp []VagaResponse
+	resp := []VagaResponse{}
 	for _, vaga := range vagas {
 		clienteNome := ""
 		if vaga.Cliente != nil {
@@ -213,7 +229,7 @@ func (uc *VagaUseCase) ListarPorCliente(ctx context.Context, idUsuario uint, fil
 	for _, anexo := range anexos {
 		anexosPorVagaMap[*anexo.VagaID] = append(anexosPorVagaMap[*anexo.VagaID], anexo.URL)
 	}
-	var resp []VagaResponse
+	resp := []VagaResponse{}
 	for _, vaga := range vagas {
 		clienteNome := ""
 		if vaga.Cliente != nil {
@@ -257,7 +273,7 @@ func (uc *VagaUseCase) ListarPorLocalizacao(ctx context.Context, latitude, longi
 	for _, anexo := range anexos {
 		anexosPorVagaMap[*anexo.VagaID] = append(anexosPorVagaMap[*anexo.VagaID], anexo.URL)
 	}
-	var resp []VagaResponse
+	resp := []VagaResponse{}
 	for _, vaga := range vagas {
 		clienteNome := ""
 		if vaga.Cliente != nil {

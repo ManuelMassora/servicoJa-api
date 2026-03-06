@@ -1,18 +1,22 @@
 package handler
 
 import (
-	"errors"
+	"context"
 	"net/http"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
-type AuthHandler struct {
-	uc services.AuthUSer
+type AuthUseCase interface {
+	Authenticate(ctx context.Context, request services.AuthRequest) (*services.AuthResponse, error)
 }
 
-func NewAuthHandler(uc services.AuthUSer) *AuthHandler {
+type AuthHandler struct {
+	uc AuthUseCase
+}
+
+func NewAuthHandler(uc AuthUseCase) *AuthHandler {
 	return &AuthHandler{uc: uc}
 }
 
@@ -22,10 +26,10 @@ func (h *AuthHandler) Authenticate(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"Erro": "Requisição inválida:"})
 		return
 	}
-	
+
 	token, err := h.uc.Authenticate(ctx, input)
 	if err != nil {
-		if errors.Is(err, errors.New("credenciais inválidas")) {
+		if err.Error() == "credenciais inválidas" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}

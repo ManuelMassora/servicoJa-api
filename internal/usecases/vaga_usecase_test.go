@@ -38,9 +38,9 @@ func TestVagaUseCase_CriarVaga_Success(t *testing.T) {
 
 	pUC.On("IniciarPagamentoC2B", ctx, mock.Anything, req.TelefonePagamento).Return(nil)
 
-	err := uc.CriarVaga(ctx, req, idUsuario)
-
+	idVaga, err := uc.CriarVaga(ctx, req, idUsuario)
 	assert.NoError(t, err)
+	assert.Equal(t, uint(10), idVaga)
 }
 
 func TestVagaUseCase_ListarVagasDisponiveis_Success(t *testing.T) {
@@ -80,6 +80,7 @@ func TestVagaUseCase_CancelarVaga_Success(t *testing.T) {
 
 	vRepo.On("BuscarPorID", ctx, id).Return(vaga, nil)
 	vRepo.On("Salvar", ctx, mock.Anything).Return(nil)
+	pUC.On("ProcessarReembolsoVaga", ctx, id, idUsuario).Return(nil)
 
 	err := uc.CancelarVaga(ctx, id, idUsuario)
 

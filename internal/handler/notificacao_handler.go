@@ -1,25 +1,32 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
-	"github.com/gin-gonic/gin"	
+	"github.com/gin-gonic/gin"
 )
+
+type NotificacaoUseCase interface {
+	ListarPorUsuario(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.NotificacaoResponse, error)
+	MarcarComoLida(ctx context.Context, idNotificacao uint, idUsuario uint) error
+	MarcarTodasComoLidas(ctx context.Context, idUsuario uint) error
+}
 
 type NotificacaoResponse usecases.NotificacaoResponse
 
 type NotificacaoHandler struct {
-	uc usecases.NotificacaoUseCase 
+	uc NotificacaoUseCase
 }
 
-func NewNotificacaoHandler(uc usecases.NotificacaoUseCase) *NotificacaoHandler {
-	return &NotificacaoHandler{uc: uc} 
+func NewNotificacaoHandler(uc NotificacaoUseCase) *NotificacaoHandler {
+	return &NotificacaoHandler{uc: uc}
 }
 
 func (h *NotificacaoHandler) ListarPorUsuario(c *gin.Context) {
-	idUsuario, err := getUsuarioID(c) 
+	idUsuario, err := getUsuarioID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuário não autenticado"})
 		return
@@ -29,7 +36,7 @@ func (h *NotificacaoHandler) ListarPorUsuario(c *gin.Context) {
 	orderBy := c.Query("orderBy")
 	orderDir := c.Query("orderDir")
 	limit, offset, page, pageSize := ExtractPagination(c)
-	
+
 	notificacoes, err := h.uc.ListarPorUsuario(
 		c.Request.Context(),
 		uint(idUsuario),
@@ -62,14 +69,14 @@ func (h *NotificacaoHandler) MarcarComoLida(c *gin.Context) {
 		return
 	}
 
-	idUsuario, err := getUsuarioID(c) 
+	idUsuario, err := getUsuarioID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuário não autenticado"})
 		return
-	}	
+	}
 	err = h.uc.MarcarComoLida(c.Request.Context(), uint(idNotificacao), uint(idUsuario))
 	if err != nil {
-		
+
 		if err.Error() == "acesso negado: nao pode marcar essa notificacao como lida" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return

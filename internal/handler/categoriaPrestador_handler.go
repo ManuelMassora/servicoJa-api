@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -8,11 +9,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CategoriaPrestadorHandler struct {
-	uc usecases.CategoriaPrestadorUsecase
+type CategoriaPrestadorUsecase interface {
+	Criar(ctx context.Context, req usecases.CategoriaPrestadorRequest) (*usecases.CategoriaPrestadorResponse, error)
+	Editar(ctx context.Context, id uint, campos map[string]interface{}) (*usecases.CategoriaPrestadorResponse, error)
+	Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.CategoriaPrestadorResponse, error)
 }
 
-func NewCategoriaPrestadorHandler(uc usecases.CategoriaPrestadorUsecase) *CategoriaPrestadorHandler {
+type CategoriaPrestadorHandler struct {
+	uc CategoriaPrestadorUsecase
+}
+
+func NewCategoriaPrestadorHandler(uc CategoriaPrestadorUsecase) *CategoriaPrestadorHandler {
 	return &CategoriaPrestadorHandler{uc: uc}
 }
 
@@ -60,7 +67,7 @@ func (h *CategoriaPrestadorHandler) Listar(c *gin.Context) {
 	orderBy := c.Query("orderBy")
 	orderDir := c.Query("orderDir")
 	limit, offset, page, pageSize := ExtractPagination(c)
-		
+
 	propostas, err := h.uc.Listar(
 		c.Request.Context(),
 		filters,

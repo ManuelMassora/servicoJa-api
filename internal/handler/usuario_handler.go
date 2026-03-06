@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"mime"
 	"strconv"
@@ -16,12 +17,24 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
+type UsuarioUseCase interface {
+	CriarAdmin(ctx context.Context, request usecases.UsuarioRequest) error
+	CriarCliente(ctx context.Context, request usecases.UsuarioRequest) error
+	CriarPrestador(ctx context.Context, request usecases.PrestadorRequest) error
+	EditarPrestador(ctx context.Context, userId uint, campos map[string]interface{}) (*usecases.PrestadorResponse, error)
+	BuscarPrestador(ctx context.Context, id uint) (*usecases.PrestadorResponse, error)
+	BuscarPorID(ctx context.Context, id uint) (*usecases.UsuarioResponse, error)
+	ListarTodosUsuarios(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.UsuarioResponse, error)
+	ListarPrestadores(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.PrestadorResponse, error)
+	ListarPrestadoresPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.PrestadorResponse, error)
+}
+
 type UsuarioHandler struct {
-	uc       usecases.UsuarioUseCase
+	uc       UsuarioUseCase
 	uploader *services.SupabaseUploader
 }
 
-func NewUsuarioHandler(uc usecases.UsuarioUseCase, uploader *services.SupabaseUploader) *UsuarioHandler {
+func NewUsuarioHandler(uc UsuarioUseCase, uploader *services.SupabaseUploader) *UsuarioHandler {
 	return &UsuarioHandler{uc: uc, uploader: uploader}
 }
 
@@ -226,6 +239,22 @@ func (h *UsuarioHandler) BuscarPrestadorPorID(c *gin.Context) {
 	}
 
 	c.JSON(200, prestador)
+}
+
+func (h *UsuarioHandler) Perfil(c *gin.Context) {
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuário não autenticado"})
+		return
+	}
+
+	usuario, err := h.uc.BuscarPorID(c.Request.Context(), idUsuario)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Usuário não encontrado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, usuario)
 }
 
 func (h *UsuarioHandler) ListarTodosUsuarios(c *gin.Context) {

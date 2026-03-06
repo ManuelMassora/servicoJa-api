@@ -31,6 +31,7 @@ func (r *VagaRepository) Salvar(ctx context.Context, vaga *model.Vaga) error {
 func (r *VagaRepository) BuscarPorID(ctx context.Context, id uint) (*model.Vaga, error) {
 	var vaga model.Vaga
 	err := r.db.WithContext(ctx).
+		Unscoped().
 		Preload("Cliente").
 		Preload("Prestador").
 		First(&vaga, id).Error

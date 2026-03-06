@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"mime"
 	"mime/multipart"
@@ -17,12 +18,25 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
+type AgendamentoUC interface {
+	Criar(ctx context.Context, req *usecases.AgendamentoRequest, idCliente uint) (uint, error)
+	Buscar(ctx context.Context, id uint, idUsuario uint) (*usecases.AgendamentoResponse, error)
+	Aceitar(ctx context.Context, id uint, idUsuario uint) (uint, error)
+	Recusar(ctx context.Context, id uint, idUsuario uint) error
+	Cancelar(ctx context.Context, id uint, idUsuario uint) error
+	Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AgendamentoResponse, error)
+	ListarPorClienteID(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AgendamentoGroupCategoriaResponse, error)
+	ListarPorPrestadorIDAgrupado(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AgendamentoGroupCategoriaResponse, error)
+	ListarPorCatalogID(ctx context.Context, idUsuario, idCatalogo uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AgendamentoResponse, error)
+	ListarPorLocalizacao(ctx context.Context, idUsuario uint, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.AgendamentoResponse, error)
+}
+
 type AgendamentoHandler struct {
-	uc       usecases.AgendamentoUC
+	uc       AgendamentoUC
 	uploader *services.SupabaseUploader
 }
 
-func NewAgendamentoHandler(uc usecases.AgendamentoUC, uploader *services.SupabaseUploader) *AgendamentoHandler {
+func NewAgendamentoHandler(uc AgendamentoUC, uploader *services.SupabaseUploader) *AgendamentoHandler {
 	return &AgendamentoHandler{uc: uc, uploader: uploader}
 }
 
@@ -111,12 +125,13 @@ func (h *AgendamentoHandler) Criar(c *gin.Context) {
 		return
 	}
 
-	if err := h.uc.Criar(c.Request.Context(), &req, idCliente); err != nil {
+	idAgendamento, err := h.uc.Criar(c.Request.Context(), &req, idCliente)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha ao criar agendamento: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Agendamento criado com sucesso!"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Agendamento criado com sucesso!", "id": idAgendamento})
 }
 
 func (h *AgendamentoHandler) Buscar(c *gin.Context) {
@@ -162,7 +177,7 @@ func (h *AgendamentoHandler) Aceitar(c *gin.Context) {
 		return
 	}
 
-	err = h.uc.Aceitar(c.Request.Context(), uint(agendamentoID), idUsuario)
+	idServico, err := h.uc.Aceitar(c.Request.Context(), uint(agendamentoID), idUsuario)
 	if err != nil {
 		if err.Error() == "acesso negado: você não é o cliente nem o prestador deste agendamento" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
@@ -172,7 +187,7 @@ func (h *AgendamentoHandler) Aceitar(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, nil)
+	c.JSON(http.StatusOK, gin.H{"message": "Agendamento aceito com sucesso!", "id_servico": idServico})
 }
 
 func (h *AgendamentoHandler) Recusar(c *gin.Context) {

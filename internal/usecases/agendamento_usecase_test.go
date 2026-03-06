@@ -54,9 +54,10 @@ func TestAgendamentoUseCase_Criar_Success(t *testing.T) {
 	usuarioRepo.On("IncrementarNotificacoesNovas", ctx, mock.Anything).Return(nil)
 	catalogoRepo.On("IncrementarAgendamentosNovos", ctx, mock.Anything).Return(nil)
 
-	err := uc.Criar(ctx, req, idCliente)
+	idAgendamento, err := uc.Criar(ctx, req, idCliente)
 
 	assert.NoError(t, err)
+	assert.Equal(t, uint(10), idAgendamento)
 	repo.AssertExpectations(t)
 }
 
@@ -127,9 +128,10 @@ func TestAgendamentoUseCase_Aceitar_Success(t *testing.T) {
 	pagamentoRepo.On("AtualizarIDServico", ctx, uint(50), uint(100)).Return(nil)
 	repo.On("AtualizarStatus", ctx, id, "EM_ANDAMENTO").Return(nil)
 
-	err := uc.Aceitar(ctx, id, idPrestadorUser)
+	idServico, err := uc.Aceitar(ctx, id, idPrestadorUser)
 
 	assert.NoError(t, err)
+	assert.Equal(t, uint(100), idServico)
 }
 
 func TestAgendamentoUseCase_Listar_Success(t *testing.T) {

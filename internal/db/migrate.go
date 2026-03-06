@@ -75,22 +75,34 @@ func createEnums(db *gorm.DB) error {
 
 func autoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
+		// Nível 0 — sem dependências
 		&model.RolePermissao{},
 		&model.CategoriaPrestador{},
-		&model.Usuario{},
-		&model.Cliente{},
-		&model.Prestador{},
-		&model.Servico{},
 		&model.Categoria{},
+		// Nível 1 — depende de RolePermissao
+		&model.Usuario{},
+		// Nível 2 — depende de Usuario
+		&model.Cliente{},
+		// Nível 3 — depende de Usuario, CategoriaPrestador
+		&model.Prestador{},
+		// Nível 4 — depende de Cliente, Prestador
+		&model.Vaga{},
+		// Nível 5 — depende de Prestador, Categoria
+		&model.Catalogo{},
+		// Nível 6 — depende de Vaga, Prestador
+		&model.Proposta{},
+		// Nível 7 — depende de Cliente, Catalogo
+		&model.Agendamento{},
+		// Nível 8 — depende de Agendamento, Vaga, Cliente, Prestador
+		&model.Servico{},
+		// Nível 9 — depende de Servico
 		&model.Avaliacao{},
 		&model.Chat{},
+		&model.Mensagem{},
 		&model.Notificacao{},
 		&model.Pagamento{},
 		&model.Transacao{},
-		&model.Vaga{},
-		&model.Catalogo{},
-		&model.Proposta{},
-		&model.Agendamento{},
+		// Nível 10 — depende de Agendamento, Vaga, Catalogo
 		&model.AnexoImagem{},
 		&model.Galeria{},
 		&model.Imagem{},

@@ -1,18 +1,23 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	gatewaympesa "github.com/ManuelMassora/servicoJa-api/internal/infra/gateway_mpesa"
-	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
 	"github.com/gin-gonic/gin"
 )
 
-type PagamentoHandler struct {
-	uc usecases.PagamentoUseCase
+type PagamentoUseCase interface {
+	ProcessarCallbackMpesa(ctx context.Context, payload gatewaympesa.MpesaCallbackPayload) error
+	ProcessarQuerySimulada(ctx context.Context, referencia string) error
 }
 
-func NewPagamentoHandler(uc usecases.PagamentoUseCase) *PagamentoHandler {
+type PagamentoHandler struct {
+	uc PagamentoUseCase
+}
+
+func NewPagamentoHandler(uc PagamentoUseCase) *PagamentoHandler {
 	return &PagamentoHandler{uc: uc}
 }
 

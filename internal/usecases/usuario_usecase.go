@@ -9,10 +9,10 @@ import (
 )
 
 type UsuarioUseCase struct {
-	usuarioRepo model.UsuarioRepo
-	clienteRepo model.ClienteRepo
+	usuarioRepo   model.UsuarioRepo
+	clienteRepo   model.ClienteRepo
 	prestadorRepo model.PrestadorRepo
-	galeriaRepo model.GaleriaRepo
+	galeriaRepo   model.GaleriaRepo
 }
 
 func NewUsuarioUseCase(
@@ -22,52 +22,53 @@ func NewUsuarioUseCase(
 	galeriaRepo model.GaleriaRepo,
 ) *UsuarioUseCase {
 	return &UsuarioUseCase{
-		usuarioRepo: usuarioRepo,
-		clienteRepo: clienteRepo,
+		usuarioRepo:   usuarioRepo,
+		clienteRepo:   clienteRepo,
 		prestadorRepo: prestadorRepo,
-		galeriaRepo: galeriaRepo,
+		galeriaRepo:   galeriaRepo,
 	}
 }
 
 type UsuarioRequest struct {
-	Nome      string `json:"nome" binding:"required"`
-	Telefone  string `json:"telefone" binding:"required"`
-	Senha     string `json:"senha,omitempty" binding:"required"`
-	ImagemURL string `json:"imagem_url"`
+	Nome      string `json:"nome" form:"nome" binding:"required"`
+	Telefone  string `json:"telefone" form:"telefone" binding:"required"`
+	Senha     string `json:"senha,omitempty" form:"senha" binding:"required"`
+	ImagemURL string `json:"imagem_url" form:"imagem_url"`
 }
 
 type UsuarioResponse struct {
-	ID        uint   `json:"id"`
-	Nome      string `json:"nome"`
-	Telefone  string `json:"telefone"`
-	ImagemURL string `json:"imagem_url"`
+	ID                   uint   `json:"id"`
+	Nome                 string `json:"nome"`
+	Telefone             string `json:"telefone"`
+	ImagemURL            string `json:"imagem_url"`
+	CancelamentoContador uint   `json:"cancelamento_contador"`
 }
 
 type PrestadorRequest struct {
 	Nome        string  `form:"nome" binding:"required"`
 	Telefone    string  `form:"telefone" binding:"required"`
 	Senha       string  `form:"senha" binding:"required"`
-	ImagemURL   string	`form:"-"`
+	ImagemURL   string  `form:"-"`
 	Localizacao string  `form:"localizacao" binding:"required"`
 	Latitude    float64 `form:"latitude" binding:"required"`
 	Longitude   float64 `form:"longitude" binding:"required"`
 }
 
 type PrestadorResponse struct {
-	ID          uint    `json:"id"`
-	Nome        string  `json:"nome"`
-	Telefone    string  `json:"telefone"`
-	Localizacao string  `json:"localizacao"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Disponivel  bool    `json:"disponivel"`
-	ImagemURL   string  `json:"imagem_url"`
-	Galeria	 	[]string `json:"galeria"`
-	Categoria  string `json:"categoria,omitempty"`
+	ID          uint     `json:"id"`
+	Nome        string   `json:"nome"`
+	Telefone    string   `json:"telefone"`
+	Localizacao string   `json:"localizacao"`
+	Latitude    float64  `json:"latitude"`
+	Longitude   float64  `json:"longitude"`
+	Disponivel  bool     `json:"disponivel"`
+	ImagemURL   string   `json:"imagem_url"`
+	Galeria     []string `json:"galeria"`
+	Categoria   string   `json:"categoria,omitempty"`
 }
 
-func (uc *UsuarioUseCase) CriarAdmin(ctx context.Context, request UsuarioRequest) error{
-	
+func (uc *UsuarioUseCase) CriarAdmin(ctx context.Context, request UsuarioRequest) error {
+
 	if err := uc.SeTelefoneExiste(ctx, request.Telefone); err != nil {
 		return err
 	}
@@ -78,18 +79,18 @@ func (uc *UsuarioUseCase) CriarAdmin(ctx context.Context, request UsuarioRequest
 	return uc.usuarioRepo.Criar(ctx, admin)
 }
 
-func (uc *UsuarioUseCase) CriarCliente(ctx context.Context, request UsuarioRequest) error{
+func (uc *UsuarioUseCase) CriarCliente(ctx context.Context, request UsuarioRequest) error {
 	if err := uc.SeTelefoneExiste(ctx, request.Telefone); err != nil {
 		return err
 	}
 	cliente, err := model.NewCliente(request.Nome, request.Telefone, request.Senha, request.ImagemURL)
 	if err != nil {
 		return err
-	} 
+	}
 	return uc.clienteRepo.Criar(ctx, cliente)
 }
 
-func (uc *UsuarioUseCase) CriarPrestador(ctx context.Context, request PrestadorRequest) error{
+func (uc *UsuarioUseCase) CriarPrestador(ctx context.Context, request PrestadorRequest) error {
 	if err := uc.SeTelefoneExiste(ctx, request.Telefone); err != nil {
 		return err
 	}
@@ -124,6 +125,35 @@ func (uc *UsuarioUseCase) EditarPrestador(ctx context.Context, userId uint, camp
 	}, nil
 }
 
+func (uc *UsuarioUseCase) BuscarPorID(ctx context.Context, id uint) (*UsuarioResponse, error) {
+	u, err := uc.usuarioRepo.BuscarPorID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var imagemURL string
+	switch u.RolePermissao.Role {
+	case "CLIENTE":
+		cliente, err := uc.clienteRepo.BuscarPorID(ctx, u.ID)
+		if err == nil {
+			imagemURL = cliente.ImagemURL
+		}
+	case "PRESTADOR":
+		prestador, err := uc.prestadorRepo.BuscarPorID(ctx, u.ID)
+		if err == nil {
+			imagemURL = prestador.ImagemURL
+		}
+	}
+
+	return &UsuarioResponse{
+		ID:                   u.ID,
+		Nome:                 u.Nome,
+		Telefone:             u.Telefone,
+		ImagemURL:            imagemURL,
+		CancelamentoContador: u.CancelamentosCount,
+	}, nil
+}
+
 func (uc *UsuarioUseCase) BuscarPrestador(ctx context.Context, id uint) (*PrestadorResponse, error) {
 	prestador, err := uc.prestadorRepo.BuscarPorID(ctx, id)
 	if err != nil {
@@ -133,11 +163,11 @@ func (uc *UsuarioUseCase) BuscarPrestador(ctx context.Context, id uint) (*Presta
 	if prestador.CategoriaPrestador != nil {
 		prestadorCategoria = prestador.CategoriaPrestador.Nome
 	}
-	galeria,  err := uc.galeriaRepo.FindByPrestadorID(ctx, prestador.IDUsuario)
+	galeria, err := uc.galeriaRepo.FindByPrestadorID(ctx, prestador.IDUsuario)
 	if err != nil {
 		return nil, err
 	}
-	var imagens []string		
+	var imagens []string
 	if galeria != nil {
 		for _, imagem := range galeria.Imagens {
 			imagens = append(imagens, imagem.URL)
@@ -153,11 +183,11 @@ func (uc *UsuarioUseCase) BuscarPrestador(ctx context.Context, id uint) (*Presta
 		Disponivel:  prestador.StatusDisponivel,
 		ImagemURL:   prestador.ImagemURL,
 		Galeria:     imagens,
-		Categoria:  prestadorCategoria,
+		Categoria:   prestadorCategoria,
 	}, nil
 }
 
-func(uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]UsuarioResponse, error) {
+func (uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]UsuarioResponse, error) {
 	usuarios, err := uc.usuarioRepo.ListarTodos(ctx, filters, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -169,16 +199,16 @@ func(uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[st
 		// This is a simplification. In a real app, you might want to join tables for efficiency.
 		var imagemURL string
 		switch u.RolePermissao.Role {
-			case "CLIENTE":
-				cliente, err := uc.clienteRepo.BuscarPorID(ctx, u.ID)
-				if err == nil {
-					imagemURL = cliente.ImagemURL
-				}
-			case "PRESTADOR":
-				prestador, err := uc.prestadorRepo.BuscarPorID(ctx, u.ID)
-				if err == nil {
-					imagemURL = prestador.ImagemURL
-				}
+		case "CLIENTE":
+			cliente, err := uc.clienteRepo.BuscarPorID(ctx, u.ID)
+			if err == nil {
+				imagemURL = cliente.ImagemURL
+			}
+		case "PRESTADOR":
+			prestador, err := uc.prestadorRepo.BuscarPorID(ctx, u.ID)
+			if err == nil {
+				imagemURL = prestador.ImagemURL
+			}
 		}
 
 		response = append(response, UsuarioResponse{
@@ -191,7 +221,7 @@ func(uc *UsuarioUseCase) ListarTodosUsuarios(ctx context.Context, filters map[st
 	return response, nil
 }
 
-func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]PrestadorResponse, error) {
+func (uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[string]interface{}, statusDisponivel interface{}, orderBy string, orderDir string, limit, offset int) ([]PrestadorResponse, error) {
 	prestadores, err := uc.prestadorRepo.Listar(ctx, filters, statusDisponivel, orderBy, orderDir, limit, offset)
 	if err != nil {
 		return nil, err
@@ -200,7 +230,7 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 	for _, p := range prestadores {
 		prestadoresIDs = append(prestadoresIDs, p.IDUsuario)
 	}
-	galerias,  err := uc.galeriaRepo.FindByPrestadorIDs(ctx, prestadoresIDs)
+	galerias, err := uc.galeriaRepo.FindByPrestadorIDs(ctx, prestadoresIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +259,7 @@ func(uc *UsuarioUseCase) ListarPrestadores(ctx context.Context, filters map[stri
 			Disponivel:  p.StatusDisponivel,
 			ImagemURL:   p.ImagemURL,
 			Galeria:     imagensURLs,
-			Categoria:  prestadorCategoria,
+			Categoria:   prestadorCategoria,
 		})
 	}
 	return response, nil
@@ -244,7 +274,7 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 	for _, p := range prestadores {
 		prestadoresIDs = append(prestadoresIDs, p.IDUsuario)
 	}
-	galerias,  err := uc.galeriaRepo.FindByPrestadorIDs(ctx, prestadoresIDs)
+	galerias, err := uc.galeriaRepo.FindByPrestadorIDs(ctx, prestadoresIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -273,14 +303,14 @@ func (uc *UsuarioUseCase) ListarPrestadoresPorLocalizacao(ctx context.Context, l
 			Disponivel:  p.StatusDisponivel,
 			ImagemURL:   p.ImagemURL,
 			Galeria:     imagensURLs,
-			Categoria:  prestadorCategoria,
+			Categoria:   prestadorCategoria,
 		})
 	}
 	return response, nil
 }
 
-func(uc *UsuarioUseCase) SeTelefoneExiste(ctx context.Context, telefone string) error {
-		if _, err := uc.usuarioRepo.BuscarPorTelefone(ctx, telefone); err != nil {
+func (uc *UsuarioUseCase) SeTelefoneExiste(ctx context.Context, telefone string) error {
+	if _, err := uc.usuarioRepo.BuscarPorTelefone(ctx, telefone); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
 		}

@@ -28,9 +28,9 @@ func TestCatalogoUseCase_Criar_Success(t *testing.T) {
 	repo.On("Create", ctx, mock.Anything).Return(nil)
 	anexoRepo.On("Create", ctx, mock.Anything).Return(nil)
 
-	err := uc.Criar(ctx, req, 1)
-
+	idCatalogo, err := uc.Criar(ctx, req, 1)
 	assert.NoError(t, err)
+	assert.Equal(t, uint(0), idCatalogo) // 0 because mock repo doesn't set ID
 }
 
 func TestCatalogoUseCase_Listar_Success(t *testing.T) {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"mime"
 	"net/http"
@@ -15,12 +16,21 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
+type VagaUseCase interface {
+	CriarVaga(ctx context.Context, req usecases.VagaRequest, idUsuario uint) (uint, error)
+	CancelarVaga(ctx context.Context, idVaga uint, idUsuario uint) error
+	ListarVagasDisponiveis(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.VagaResponse, error)
+	ListarPorCliente(ctx context.Context, idUsuario uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.VagaResponse, error)
+	ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.VagaResponse, error)
+	BuscarPorIDIfCliente(ctx context.Context, id, idUsuario uint) (*usecases.VagaResponse, error)
+}
+
 type VagaHandler struct {
-	uc       usecases.VagaUseCase
+	uc       VagaUseCase
 	uploader *services.SupabaseUploader
 }
 
-func NewVagaHandler(uc usecases.VagaUseCase, uploader *services.SupabaseUploader) *VagaHandler {
+func NewVagaHandler(uc VagaUseCase, uploader *services.SupabaseUploader) *VagaHandler {
 	return &VagaHandler{uc: uc, uploader: uploader}
 }
 
@@ -80,13 +90,36 @@ func (h *VagaHandler) CriarVaga(c *gin.Context) {
 		return
 	}
 
-	err = h.uc.CriarVaga(c.Request.Context(), req, uint(idUsuario))
+	idVaga, err := h.uc.CriarVaga(c.Request.Context(), req, uint(idUsuario))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Vaga criada com sucesso"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Vaga criada com sucesso", "id": idVaga})
+}
+
+func (h *VagaHandler) BuscarVaga(c *gin.Context) {
+	idVagaStr := c.Param("id")
+	idVaga, err := strconv.ParseUint(idVagaStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID da vaga inválido"})
+		return
+	}
+
+	idUsuario, err := getUsuarioID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuário não autenticado"})
+		return
+	}
+
+	vaga, err := h.uc.BuscarPorIDIfCliente(c.Request.Context(), uint(idVaga), uint(idUsuario))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Vaga não encontrada ou acesso negado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, vaga)
 }
 
 func (h *VagaHandler) CancelarVaga(c *gin.Context) {

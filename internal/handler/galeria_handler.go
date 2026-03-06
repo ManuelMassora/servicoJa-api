@@ -2,26 +2,31 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"mime"
 	"net/http"
 	"time"
 
 	"github.com/ManuelMassora/servicoJa-api/internal/dto"
+	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"github.com/ManuelMassora/servicoJa-api/internal/services"
-	"github.com/ManuelMassora/servicoJa-api/internal/usecases"
 	"github.com/ManuelMassora/servicoJa-api/pkg"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"golang.org/x/sync/errgroup"
 )
 
+type GaleriaUseCase interface {
+	AddImagesToGaleria(ctx context.Context, prestadorID uint, input dto.GaleriaInput) (*model.Galeria, error)
+}
+
 type GaleriaHandler struct {
-	uc       *usecases.GaleriaUseCase
+	uc       GaleriaUseCase
 	uploader *services.SupabaseUploader
 }
 
-func NewGaleriaHandler(uc *usecases.GaleriaUseCase, uploader *services.SupabaseUploader) *GaleriaHandler {
+func NewGaleriaHandler(uc GaleriaUseCase, uploader *services.SupabaseUploader) *GaleriaHandler {
 	return &GaleriaHandler{uc: uc, uploader: uploader}
 }
 

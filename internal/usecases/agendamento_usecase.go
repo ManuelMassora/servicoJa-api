@@ -86,19 +86,19 @@ type PrestadorAgendamentosResponse struct {
 	PrestadorNome string `json:"nome"`
 }
 
-func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) error {
+func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idCliente uint) (uint, error) {
 	usuario, err := uc.usuarioRepo.BuscarPorID(ctx, idCliente)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if usuario.SuspensoAte != nil && usuario.SuspensoAte.After(time.Now()) {
-		return errors.New("sua conta está suspensa até " + usuario.SuspensoAte.Format("02/01/2006 15:04"))
+		return 0, errors.New("sua conta está suspensa até " + usuario.SuspensoAte.Format("02/01/2006 15:04"))
 	}
 
 	catalogo, err := uc.catalogoRepo.FindByID(ctx, req.IDCatalogo)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	agendamento := &model.Agendamento{
@@ -114,7 +114,7 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 
 	agendamentoSave, err := uc.r.Criar(ctx, agendamento)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Criar registro de pagamento pendente
@@ -124,10 +124,10 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 		Valor:         catalogo.ValorFixo,
 		Status:        model.StatusPendente, // Esperando C2B
 		IDPrestador:   &catalogo.IDPrestador,
-		Referencia:    "REF" + strconv.FormatUint(uint64(agendamentoSave.ID), 10),
+		Referencia:    "AGE-" + strconv.FormatUint(uint64(agendamentoSave.ID), 10),
 	}
 	if err := uc.pagamentoRepo.Criar(ctx, pagamento); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Iniciar o processo de pagamento via M-Pesa
@@ -143,7 +143,7 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 		}
 		if err := uc.anexoImagemRepo.Create(ctx, anexo); err != nil {
 			// In a real application, you might want to handle the rollback of the agendamento creation
-			return err
+			return 0, err
 		}
 	}
 
@@ -153,16 +153,16 @@ func (uc *AgendamentoUC) Criar(ctx context.Context, req *AgendamentoRequest, idC
 		Mensagem:  "Você tem um novo agendamento para o serviço: " + catalogo.Nome,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, catalogo.ID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := uc.catalogoRepo.IncrementarAgendamentosNovos(ctx, catalogo.IDPrestador); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return agendamentoSave.ID, nil
 }
 
 func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*AgendamentoResponse, error) {
@@ -209,17 +209,22 @@ func (uc *AgendamentoUC) Buscar(ctx context.Context, id uint, idUsuario uint) (*
 	}, nil
 }
 
-func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) error {
+func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) (uint, error) {
 	agendamento, err := uc.r.BuscarPorID(ctx, id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	prestadorIDUsuario := agendamento.Catalogo.Prestador.Usuario.ID
 	if idUsuario != prestadorIDUsuario {
-		return errors.New("acesso negado: você não é o prestador deste agendamento")
+		return 0, errors.New("acesso negado: você não é o prestador deste agendamento")
 	}
 	if agendamento.Status == "EM_ANDAMENTO" {
-		return nil
+		// Se já está em andamento, buscar o serviço existente
+		p, err := uc.pagamentoRepo.BuscarPorAgendamento(ctx, id)
+		if err == nil && p != nil && p.IDServico != nil {
+			return *p.IDServico, nil
+		}
+		return 0, nil
 	}
 	err = uc.notifacaoRepo.Enviar(ctx, &model.Notificacao{
 		IDUsuario: agendamento.IDCliente,
@@ -227,11 +232,11 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 		Mensagem:  "Seu agendamento foi aceito para o serviço: " + agendamento.Catalogo.Nome,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = uc.usuarioRepo.IncrementarNotificacoesNovas(ctx, agendamento.IDCliente)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	servico := &model.Servico{
 		IDAgendamento:  &id,
@@ -250,12 +255,12 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 	case "por_hora":
 		servico.Preco = 0.0 // Initial price for hourly services, will be calculated at finalization
 	default:
-		return errors.New("tipo de preço de catálogo inválido")
+		return 0, errors.New("tipo de preço de catálogo inválido")
 	}
 
 	servicoSave, err := uc.servico.Criar(ctx, servico)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Associar ID do serviço ao pagamento
@@ -264,7 +269,7 @@ func (uc *AgendamentoUC) Aceitar(ctx context.Context, id uint, idUsuario uint) e
 		_ = uc.pagamentoRepo.AtualizarIDServico(ctx, p.ID, servicoSave.ID)
 	}
 
-	return uc.r.AtualizarStatus(ctx, id, "EM_ANDAMENTO")
+	return servicoSave.ID, uc.r.AtualizarStatus(ctx, id, "EM_ANDAMENTO")
 }
 
 func (uc *AgendamentoUC) Recusar(ctx context.Context, id uint, idUsuario uint) error {

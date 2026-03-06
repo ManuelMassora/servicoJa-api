@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -61,6 +62,7 @@ func (r *UsuarioRepository) IncrementarCancelamentos(ctx context.Context, id uin
 	}
 	usuario.CancelamentosCount++
 	err = r.db.WithContext(ctx).Save(&usuario).Error
+	log.Printf("USUARIO %d: Contador de cancelamentos incrementado para %d", id, usuario.CancelamentosCount)
 	return usuario.CancelamentosCount, err
 }
 
@@ -136,8 +138,8 @@ func (r *ClienteRepository) BuscarPorID(ctx context.Context, id uint) (*model.Cl
 	var cliente model.Cliente
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
-		Where("usuario_id", id).
-		First(&cliente, id).Error
+		Where("id_usuario = ?", id).
+		First(&cliente).Error
 	if err != nil {
 		return nil, err
 	}
@@ -216,8 +218,8 @@ func (r *PrestadorRepository) BuscarPorID(ctx context.Context, id uint) (*model.
 	err := r.db.WithContext(ctx).
 		Preload("Usuario").
 		Preload("CategoriaPrestador").
-		Where("id_usuario", id).
-		First(&prestador, id).Error
+		Where("id_usuario = ?", id).
+		First(&prestador).Error
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"mime"
 
@@ -20,12 +21,21 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type CatalogoUseCase interface {
+	Criar(ctx context.Context, req usecases.RequestCreateCatalogo, prestadorID uint) (uint, error)
+	Editar(ctx context.Context, id uint, prestadorID uint, campos map[string]interface{}) error
+	Apagar(ctx context.Context, id uint, prestadorID uint) error
+	Listar(ctx context.Context, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.ResponseCatalogo, error)
+	ListarPorPrestador(ctx context.Context, prestadorID uint, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.ResponseCatalogo, error)
+	ListarPorLocalizacao(ctx context.Context, latitude, longitude, radius float64, filters map[string]interface{}, orderBy string, orderDir string, limit, offset int) ([]usecases.ResponseCatalogo, error)
+}
+
 type CatalogoHandler struct {
-	uc       usecases.CatalogoUseCase
+	uc       CatalogoUseCase
 	uploader *services.SupabaseUploader
 }
 
-func NewCatalogoHandler(uc usecases.CatalogoUseCase, uploader *services.SupabaseUploader) *CatalogoHandler {
+func NewCatalogoHandler(uc CatalogoUseCase, uploader *services.SupabaseUploader) *CatalogoHandler {
 	return &CatalogoHandler{uc: uc, uploader: uploader}
 }
 
@@ -109,12 +119,13 @@ func (h *CatalogoHandler) Criar(c *gin.Context) {
 		return
 	}
 
-	if err := h.uc.Criar(c.Request.Context(), request, prestadorID); err != nil {
+	idCatalogo, err := h.uc.Criar(c.Request.Context(), request, prestadorID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Catálogo criado com sucesso"})
+	c.JSON(http.StatusCreated, gin.H{"message": "Catálogo criado com sucesso", "id": idCatalogo})
 }
 
 func (h *CatalogoHandler) Editar(c *gin.Context) {

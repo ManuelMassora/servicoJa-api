@@ -20,20 +20,20 @@ type CategoriaRequest struct {
 }
 
 type CategoriaResponse struct {
-	ID			uint
+	ID        uint   `json:"id"`
 	Nome      string `json:"nome"`
 	Descricao string `json:"descricao"`
 }
 
-func (uc *CategoriaUseCase) Criar(ctx context.Context, request CategoriaRequest) error {
+func (uc *CategoriaUseCase) Criar(ctx context.Context, request CategoriaRequest) (uint, error) {
 	categoria := &model.Categoria{
 		Nome:      request.Nome,
 		Descricao: request.Descricao,
 	}
 	if err := uc.CategoriaRepo.Criar(ctx, categoria); err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return categoria.ID, nil
 }
 
 func (uc *CategoriaUseCase) Editar(ctx context.Context, id uint, campos map[string]interface{}) error {

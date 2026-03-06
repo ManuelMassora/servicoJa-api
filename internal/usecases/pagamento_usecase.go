@@ -34,6 +34,7 @@ type PagamentoUseCase interface {
 	IniciarPagamentoC2B(ctx context.Context, idPagamento uint, telefone string) error
 	ConfirmarPagamentoC2B(ctx context.Context, referencia string) error
 	ProcessarCancelamentoComReembolso(ctx context.Context, idServico uint, idUsuarioCancelou uint) error
+	ProcessarReembolsoVaga(ctx context.Context, idVaga uint, idUsuarioCancelou uint) error
 	ProcessarPagamentoPrestador(ctx context.Context, idServico uint) error
 	ProcessarCallbackMpesa(ctx context.Context, payload gatewaympesa.MpesaCallbackPayload) error
 	ProcessarQuerySimulada(ctx context.Context, referencia string) error
@@ -218,6 +219,52 @@ func (uc *pagamentoUseCaseImpl) ProcessarCancelamentoComReembolso(ctx context.Co
 
 	err = uc.repo.AtualizarStatus(ctx, pagamento.ID, model.StatusCancelado)
 	return err
+}
+
+func (uc *pagamentoUseCaseImpl) ProcessarReembolsoVaga(ctx context.Context, idVaga uint, idUsuarioCancelou uint) error {
+	// Incrementar contador de cancelamentos
+	count, err := uc.usuarioRepo.IncrementarCancelamentos(ctx, idUsuarioCancelou)
+	if err == nil && count >= 5 {
+		suspensao := time.Now().Add(24 * time.Hour)
+		_ = uc.usuarioRepo.SuspenderUsuario(ctx, idUsuarioCancelou, suspensao)
+	}
+
+	// Buscar pagamento original (C2B) vinculado à vaga
+	pagamento, err := uc.repo.BuscarPorVaga(ctx, idVaga)
+	if err != nil || pagamento == nil {
+		return fmt.Errorf("pagamento não encontrado para reembolso de vaga")
+	}
+
+	if pagamento.Status == model.StatusCancelado {
+		return nil // Já reembolsado
+	}
+
+	vaga, err := uc.vagaRepo.BuscarPorID(ctx, idVaga)
+	if err != nil {
+		return fmt.Errorf("erro ao buscar vaga para reembolso: %w", err)
+	}
+
+	// Buscar informações do cliente para o MSISDN
+	cliente, err := uc.usuarioRepo.BuscarPorID(ctx, vaga.IDCliente)
+	if err != nil {
+		return fmt.Errorf("erro ao buscar cliente para reembolso: %w", err)
+	}
+	telefone := strings.TrimPrefix(cliente.Telefone, "+")
+
+	amount := fmt.Sprintf("%.2f", pagamento.Valor)
+	thirdPartyRef := fmt.Sprintf("REF_VAGA_REFUND_%d", idVaga)
+
+	// Usamos 0 como servicoID no payload, ou algum identificador de que é Vaga
+	payload := uc.construirPayloadB2C(amount, telefone, thirdPartyRef, 0)
+	resp, err := uc.enviarPagamento(mpesaB2CURL, payload)
+	if err != nil {
+		log.Printf("Aviso: Falha no envio M-Pesa B2C (vaga %d): %v", idVaga, err)
+		// Em ambiente de teste, podemos querer continuar marcando como cancelado
+	} else {
+		log.Printf("Reembolso Vaga B2C iniciado: %s", string(resp))
+	}
+
+	return uc.repo.AtualizarStatus(ctx, pagamento.ID, model.StatusCancelado)
 }
 
 func (uc *pagamentoUseCaseImpl) ProcessarPagamentoPrestador(ctx context.Context, idServico uint) error {

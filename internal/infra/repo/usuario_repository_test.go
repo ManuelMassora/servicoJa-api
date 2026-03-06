@@ -2,25 +2,18 @@ package repo_test
 
 import (
 	"context"
-	"log"
 	"testing"
 	"time"
 
-	"github.com/ManuelMassora/servicoJa-api/internal/db"
 	"github.com/ManuelMassora/servicoJa-api/internal/infra/repo"
 	"github.com/ManuelMassora/servicoJa-api/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
-	"gorm.io/gorm"
 )
 
+// UsuarioRepoTestSuite usa TestDB definido no main_test.go — sem container próprio.
 type UsuarioRepoTestSuite struct {
 	suite.Suite
-	pgContainer   *postgres.PostgresContainer
-	db            *gorm.DB
 	repo          model.UsuarioRepo
 	clienteRepo   model.ClienteRepo
 	prestadorRepo model.PrestadorRepo
@@ -29,52 +22,14 @@ type UsuarioRepoTestSuite struct {
 
 func (s *UsuarioRepoTestSuite) SetupSuite() {
 	s.ctx = context.Background()
-
-	dbName := "servicoja_test"
-	dbUser := "postgres"
-	dbPassword := "postgres"
-
-	pgContainer, err := postgres.Run(s.ctx,
-		"postgres:15-alpine",
-		postgres.WithDatabase(dbName),
-		postgres.WithUsername(dbUser),
-		postgres.WithPassword(dbPassword),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
-	)
-	if err != nil {
-		s.T().Fatalf("failed to start container: %s", err)
-	}
-
-	connStr, err := pgContainer.ConnectionString(s.ctx, "sslmode=disable")
-	if err != nil {
-		s.T().Fatalf("failed to get connection string: %s", err)
-	}
-
-	gormDB, err := db.InitDB(connStr)
-	if err != nil {
-		s.T().Fatalf("failed to initialize db: %s", err)
-	}
-
-	s.pgContainer = pgContainer
-	s.db = gormDB
-	s.repo = repo.NewUsuarioRepository(gormDB)
-	s.clienteRepo = repo.NewClienteRepository(gormDB)
-	s.prestadorRepo = repo.NewPrestadorRepository(gormDB)
+	s.repo = repo.NewUsuarioRepository(TestDB)
+	s.clienteRepo = repo.NewClienteRepository(TestDB)
+	s.prestadorRepo = repo.NewPrestadorRepository(TestDB)
 }
 
-func (s *UsuarioRepoTestSuite) TearDownSuite() {
-	if s.pgContainer != nil {
-		if err := s.pgContainer.Terminate(s.ctx); err != nil {
-			log.Fatalf("failed to terminate container: %s", err)
-		}
-	}
-}
-
+// SetupTest limpa a tabela antes de cada teste para garantir isolamento.
 func (s *UsuarioRepoTestSuite) SetupTest() {
-	s.db.Exec("TRUNCATE TABLE usuarios RESTART IDENTITY CASCADE")
+	TestDB.Exec("TRUNCATE TABLE usuarios RESTART IDENTITY CASCADE")
 }
 
 func TestUsuarioRepoTestSuite(t *testing.T) {
@@ -86,7 +41,7 @@ func (s *UsuarioRepoTestSuite) TestUsuario_Criar() {
 		Nome:            "Test User",
 		Telefone:        "840000001",
 		Senha:           "password",
-		RolePermissaoID: 1, // CLIENTE
+		RolePermissaoID: 1,
 	}
 
 	err := s.repo.Criar(s.ctx, u)
@@ -236,7 +191,6 @@ func (s *UsuarioRepoTestSuite) TestUsuario_Suspender() {
 
 	found, _ := s.repo.BuscarPorID(s.ctx, u.ID)
 	assert.NotNil(s.T(), found.SuspensoAte)
-	// Compare truncated to second or just After
 	assert.True(s.T(), found.SuspensoAte.After(time.Now()))
 }
 

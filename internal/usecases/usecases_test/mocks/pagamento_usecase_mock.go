@@ -26,6 +26,11 @@ func (m *MockPagamentoUseCase) ProcessarCancelamentoComReembolso(ctx context.Con
 	return args.Error(0)
 }
 
+func (m *MockPagamentoUseCase) ProcessarReembolsoVaga(ctx context.Context, idVaga uint, idUsuarioCancelou uint) error {
+	args := m.Called(ctx, idVaga, idUsuarioCancelou)
+	return args.Error(0)
+}
+
 func (m *MockPagamentoUseCase) ProcessarPagamentoPrestador(ctx context.Context, idServico uint) error {
 	args := m.Called(ctx, idServico)
 	return args.Error(0)

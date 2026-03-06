@@ -185,7 +185,7 @@ func (r *AgendamentoRepo) FindByLocation(ctx context.Context, userID uint, latit
 	var agendamentos []model.Agendamento
 
 	haversine := fmt.Sprintf(
-		"6371 * acos(cos(radians(%f)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(latitude)))",
+		"6371 * acos(cos(radians(%f)) * cos(radians(agendamentos.latitude)) * cos(radians(agendamentos.longitude) - radians(%f)) + sin(radians(%f)) * sin(radians(agendamentos.latitude)))",
 		latitude, longitude, latitude,
 	)
 

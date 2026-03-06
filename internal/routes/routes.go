@@ -28,6 +28,7 @@ func SetRoutes(server *gin.Engine, container *di.Container, jwtService *middlewa
 		usuario.GET("/prestador", container.UsuarioH.ListarPrestadores)
 		usuario.GET("/prestador/location", container.UsuarioH.ListarPrestadoresPorLocalizacao)
 		usuario.GET("/prestador/:id", container.UsuarioH.BuscarPrestadorPorID)
+		usuario.GET("/perfil", container.UsuarioH.Perfil)
 		usuario.PATCH("/prestador", middleware.HasRole("PRESTADOR"), container.UsuarioH.EditarPrestador)
 	}
 
@@ -57,7 +58,8 @@ func SetRoutes(server *gin.Engine, container *di.Container, jwtService *middlewa
 		agendamento.GET("/cliente", middleware.HasRole("CLIENTE"), container.AgendamentoH.ListarPorClienteID)
 		agendamento.GET("/prestador", middleware.HasRole("PRESTADOR"), container.AgendamentoH.ListarPorPrestadorID)
 		agendamento.GET("/location", container.AgendamentoH.ListarPorLocalizacao)
-		agendamento.GET("/:catalogoID", middleware.HasRole("PRESTADOR"), container.AgendamentoH.ListarPorCatalogID)
+		agendamento.GET("/:id", container.AgendamentoH.Buscar)
+		agendamento.GET("/catalogo/:catalogoID", middleware.HasRole("PRESTADOR"), container.AgendamentoH.ListarPorCatalogID)
 	}
 	servico := server.Group("servico", middleware.Auth(jwtService))
 	{
@@ -75,6 +77,7 @@ func SetRoutes(server *gin.Engine, container *di.Container, jwtService *middlewa
 		vagas.GET("", container.VagaH.ListarVagasDisponiveis)
 		vagas.GET("/location", container.VagaH.ListarPorLocalizacao)
 		vagas.GET("/cliente", container.VagaH.ListarPorCliente)
+		vagas.GET("/:id", container.VagaH.BuscarVaga)
 	}
 	propostas := server.Group("propostas", middleware.Auth(jwtService))
 	{
